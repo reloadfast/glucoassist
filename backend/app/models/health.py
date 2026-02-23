@@ -15,6 +15,9 @@ class HealthMetric(Base):
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     activity_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     activity_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sleep_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stress_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(50), nullable=True)
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

@@ -44,6 +44,8 @@ export interface HealthMetricCreate {
   weight_kg?: number
   activity_type?: string
   activity_minutes?: number
+  sleep_hours?: number
+  stress_level?: number
   notes?: string
 }
 
@@ -284,8 +286,21 @@ export interface HealthMetricOut {
   weight_kg: number | null
   activity_type: string | null
   activity_minutes: number | null
+  sleep_hours: number | null
+  stress_level: number | null
+  source: string | null
   notes: string | null
   created_at: string
+}
+
+export interface GarminStatusResponse {
+  enabled: boolean
+  username_configured: boolean
+  interval_seconds: number
+}
+
+export function getGarminStatus(): Promise<GarminStatusResponse> {
+  return apiFetch<GarminStatusResponse>('/garmin/status')
 }
 
 export interface HealthMetricListResponse {

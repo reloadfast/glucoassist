@@ -9,6 +9,9 @@ httpx==0.28.1
 pydantic-settings==2.8.1
 python-dotenv==1.0.1
 
+# ── Garmin integration ────────────────────────────────────────────────────────
+garminconnect==0.2.25
+
 # ── ML / Forecasting ──────────────────────────────────────────────────────────
 scikit-learn==1.8.0
 numpy==2.3.5

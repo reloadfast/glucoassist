@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/select'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
-import { postRetrain } from '@/lib/api'
-import type { RetrainLogEntry } from '@/lib/api'
+import { getGarminStatus, postRetrain } from '@/lib/api'
+import type { GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
 import { formatTs } from '@/lib/formatters'
 
 function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
@@ -35,6 +35,13 @@ export default function Settings() {
   const { tz, setTz } = useTimezone()
   const [retraining, setRetraining] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [garminStatus, setGarminStatus] = useState<GarminStatusResponse | null>(null)
+
+  useEffect(() => {
+    getGarminStatus()
+      .then(setGarminStatus)
+      .catch(() => {})
+  }, [])
 
   async function handleRetrain() {
     setRetraining(true)
@@ -131,6 +138,46 @@ export default function Settings() {
           ) : (
             <p className="text-sm text-muted-foreground">No retrain events yet.</p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Garmin Integration</CardTitle>
+          <CardDescription>
+            Automatically ingests resting HR, weight, sleep hours, and stress level once per hour.
+            Configure via environment variables — credentials are never stored in the database.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {garminStatus ? (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
+              <dt className="text-muted-foreground">Status</dt>
+              <dd>
+                {garminStatus.enabled ? (
+                  <span className="text-green-600 font-medium">Enabled</span>
+                ) : (
+                  <span className="text-muted-foreground">Disabled</span>
+                )}
+              </dd>
+              <dt className="text-muted-foreground">Account</dt>
+              <dd>
+                {garminStatus.username_configured ? (
+                  <span className="text-green-600">Configured</span>
+                ) : (
+                  <span className="text-muted-foreground">Not configured</span>
+                )}
+              </dd>
+              <dt className="text-muted-foreground">Poll interval</dt>
+              <dd>{garminStatus.interval_seconds / 60} min</dd>
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Set <code>GARMIN_ENABLED</code>, <code>GARMIN_USERNAME</code>, and{' '}
+            <code>GARMIN_PASSWORD</code> environment variables to activate.
+          </p>
         </CardContent>
       </Card>
 
