@@ -4,6 +4,8 @@ const navItems = [
   { to: '/', label: 'Dashboard' },
   { to: '/statistics', label: 'Statistics' },
   { to: '/patterns', label: 'Patterns' },
+  { to: '/intelligence', label: 'Intelligence' },
+  { to: '/settings', label: 'Settings' },
 ]
 
 export default function AppLayout() {

@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.glucose import GlucoseReading
 from app.schemas.analytics import HbA1cResponse, PatternsResponse, StatsResponse
 from app.services.analytics import compute_window_stats
-from app.services.patterns import detect_patterns
+from app.services.patterns import detect_patterns, update_pattern_history
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -46,4 +46,28 @@ def get_hba1c(db: Session = Depends(get_db)) -> HbA1cResponse:  # noqa: B008
 @router.get("/patterns", response_model=PatternsResponse)
 def get_patterns(db: Session = Depends(get_db)) -> PatternsResponse:  # noqa: B008
     patterns = detect_patterns(db)
+    update_pattern_history(db, patterns)
     return PatternsResponse(patterns=patterns)
+
+
+@router.get("/patterns/history")
+def get_pattern_history(db: Session = Depends(get_db)) -> dict:  # noqa: B008
+    from app.models.pattern_history import PatternHistory
+
+    rows = (
+        db.query(PatternHistory)
+        .order_by(PatternHistory.last_detected_at.desc())
+        .all()
+    )
+    return {
+        "history": [
+            {
+                "pattern_name": r.pattern_name,
+                "first_detected_at": r.first_detected_at.isoformat(),
+                "last_detected_at": r.last_detected_at.isoformat(),
+                "detection_count": r.detection_count,
+                "last_confidence": r.last_confidence,
+            }
+            for r in rows
+        ]
+    }

@@ -39,7 +39,7 @@ async def test_forecast_insufficient_data(client, db_session, tmp_path, monkeypa
     _add_readings(db_session, count=50)
 
     from app.services.forecasting import train_models
-    assert train_models(db_session) is False
+    assert train_models(db_session).success is False
 
     resp = await client.get("/api/v1/forecast")
     assert resp.status_code == 200
@@ -53,7 +53,7 @@ async def test_forecast_with_trained_models(client, db_session, tmp_path, monkey
     _add_readings(db_session, count=400)
 
     from app.services.forecasting import train_models
-    assert train_models(db_session) is True
+    assert train_models(db_session).success is True
 
     resp = await client.get("/api/v1/forecast")
     assert resp.status_code == 200
@@ -97,3 +97,31 @@ async def test_forecast_ci_bounds_ordered(client, db_session, tmp_path, monkeypa
     resp = await client.get("/api/v1/forecast")
     for f in resp.json()["forecasts"]:
         assert f["ci_lower"] <= f["predicted_mg_dl"] <= f["ci_upper"]
+
+
+@pytest.mark.asyncio
+async def test_retrain_endpoint_returns_started(client, tmp_path, monkeypatch):
+    """POST /retrain triggers background task and returns started status."""
+    monkeypatch.setattr("app.services.forecasting._model_dir", lambda: tmp_path)
+    resp = await client.post("/api/v1/forecast/retrain")
+    assert resp.status_code == 200
+    assert resp.json()["status"] in {"started", "already_running"}
+
+
+@pytest.mark.asyncio
+async def test_retrain_log_endpoint_empty(client):
+    """GET /retrain/log returns 200 with empty entries on fresh DB."""
+    resp = await client.get("/api/v1/forecast/retrain/log")
+    assert resp.status_code == 200
+    assert "entries" in resp.json()
+    assert isinstance(resp.json()["entries"], list)
+
+
+@pytest.mark.asyncio
+async def test_registry_endpoint(client, tmp_path, monkeypatch):
+    """GET /registry returns 200 with versions list (may be empty)."""
+    monkeypatch.setattr("app.services.forecasting._model_dir", lambda: tmp_path)
+    resp = await client.get("/api/v1/forecast/registry")
+    assert resp.status_code == 200
+    assert "versions" in resp.json()
+    assert isinstance(resp.json()["versions"], list)

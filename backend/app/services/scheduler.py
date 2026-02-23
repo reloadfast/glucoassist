@@ -27,11 +27,26 @@ def _ingest_job(settings: Settings) -> None:
 def _retrain_job() -> None:
     db: Session = SessionLocal()
     try:
-        from app.services.forecasting import train_models  # deferred to avoid circular import
+        from app.models.retrain_log import RetrainLog  # deferred to avoid circular import
+        from app.services.forecasting import train_models
 
-        success = train_models(db)
+        result = train_models(db, trigger_source="scheduled")
+        log = RetrainLog(
+            triggered_at=datetime.now(UTC),
+            trigger_source="scheduled",
+            success=result.success,
+            training_samples=result.training_samples if result.success else None,
+            mae_h30=result.maes.get("h30") if result.success else None,
+            mae_h60=result.maes.get("h60") if result.success else None,
+            mae_h120=result.maes.get("h120") if result.success else None,
+            promoted=result.promoted,
+            notes=result.notes,
+        )
+        db.add(log)
+        db.commit()
         logger.info(
-            "Scheduled retrain %s", "completed" if success else "skipped (insufficient data)"
+            "Scheduled retrain %s",
+            "completed" if result.success else "skipped (insufficient data)",
         )
     except Exception:
         logger.exception("Unhandled error in scheduled retrain job")
@@ -54,16 +69,17 @@ def start_scheduler(settings: Settings) -> None:
     _scheduler.add_job(
         _retrain_job,
         trigger="interval",
-        hours=24,
+        hours=settings.retrain_interval_hours,
         id="retrain_job",
         replace_existing=True,
         next_run_time=None,  # startup training handled separately in main.py
     )
     _scheduler.start()
     logger.info(
-        "Scheduler started (ingest=%ds, source=%s, retrain=24h)",
+        "Scheduler started (ingest=%ds, source=%s, retrain=%dh)",
         settings.ingest_interval_seconds,
         settings.cgm_source,
+        settings.retrain_interval_hours,
     )
 
 
