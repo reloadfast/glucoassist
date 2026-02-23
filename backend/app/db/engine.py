@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
@@ -26,16 +25,7 @@ engine = _get_engine()
 
 
 def init_db() -> None:
-    """Create tables if not exists and run alembic migrations."""
+    """Ensure the DB directory exists. Migrations are run by the entrypoint."""
     settings = get_settings()
     db_path = Path(settings.database_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Run alembic upgrade head from backend directory
-    backend_dir = Path(__file__).parent.parent.parent
-    subprocess.run(  # noqa: S603
-        ["alembic", "upgrade", "head"],  # noqa: S607
-        cwd=backend_dir,
-        check=True,
-        capture_output=True,
-    )
