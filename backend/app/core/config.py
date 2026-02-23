@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Ingest
     ingest_interval_seconds: int = 300
 
+    # Historical backfill: days of history to import on first startup (0 = disabled)
+    backfill_days: int = 90
+
 
 @lru_cache
 def get_settings() -> Settings:

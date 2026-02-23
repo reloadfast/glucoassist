@@ -1,16 +1,39 @@
+import { useState } from 'react'
+
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GlucoseChart from '@/components/GlucoseChart'
 import LogButtons from '@/components/LogButtons'
 import ReadingsTable from '@/components/ReadingsTable'
 import { useGlucoseData } from '@/hooks/useGlucoseData'
+import { postBackfill } from '@/lib/api'
+
+const BACKFILL_OPTIONS = [30, 60, 90] as const
 
 export default function Dashboard() {
   const { summary, readings, loading, error, refresh } = useGlucoseData()
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
 
   const latest = summary?.latest_reading
   const trendArrow = latest?.trend_arrow ?? '→'
   const glucoseDisplay = latest ? `${latest.glucose_mg_dl} mg/dL` : '— mg/dL'
   const tirDisplay = summary?.time_in_range_pct != null ? `${summary.time_in_range_pct}%` : '— %'
+  const isEmpty = !loading && summary?.reading_count === 0 && !latest
+
+  async function handleBackfill(days: number) {
+    setBackfilling(true)
+    setBackfillMsg(null)
+    try {
+      const result = await postBackfill(days)
+      setBackfillMsg(`Imported ${result.inserted} readings from the past ${days} days.`)
+      refresh()
+    } catch {
+      setBackfillMsg('Backfill failed — check that your CGM source URL is reachable.')
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -24,6 +47,35 @@ export default function Dashboard() {
           {error}
         </div>
       )}
+
+      {/* Historical backfill banner — shown when DB is empty */}
+      {isEmpty && (
+        <div className="rounded-md border bg-muted/40 px-4 py-4 space-y-3">
+          <p className="text-sm font-medium">No glucose history yet.</p>
+          <p className="text-sm text-muted-foreground">
+            Import historical readings from your CGM source to populate the dashboard and enable
+            analytics. The app will continue polling for new readings automatically.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">Import last:</span>
+            {BACKFILL_OPTIONS.map((days) => (
+              <Button
+                key={days}
+                variant="outline"
+                size="sm"
+                disabled={backfilling}
+                onClick={() => void handleBackfill(days)}
+              >
+                {backfilling ? '…' : `${days} days`}
+              </Button>
+            ))}
+          </div>
+          {backfillMsg && <p className="text-sm text-muted-foreground">{backfillMsg}</p>}
+        </div>
+      )}
+
+      {/* Backfill result message when DB already had data */}
+      {!isEmpty && backfillMsg && <p className="text-sm text-muted-foreground">{backfillMsg}</p>}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

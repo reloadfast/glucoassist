@@ -124,6 +124,16 @@ export function getAnalyticsPatterns(): Promise<PatternsResponse> {
   return apiFetch<PatternsResponse>('/analytics/patterns')
 }
 
+export interface BackfillResponse {
+  status: string
+  days: number
+  inserted: number
+}
+
+export function postBackfill(days = 90): Promise<BackfillResponse> {
+  return apiFetch<BackfillResponse>(`/ingest/backfill?days=${days}`, { method: 'POST' })
+}
+
 export function postInsulin(data: InsulinDoseCreate): Promise<unknown> {
   return apiFetch('/insulin', { method: 'POST', body: JSON.stringify(data) })
 }
