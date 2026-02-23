@@ -11,6 +11,12 @@ import {
 } from 'recharts'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import type { WindowStats } from '@/lib/api'
 
@@ -49,38 +55,74 @@ function tirChartData(windows: WindowStats[]) {
   }))
 }
 
+const COLUMN_DESCRIPTIONS: Record<string, string> = {
+  Avg: 'Mean glucose (mg/dL) over the window',
+  SD: 'Standard deviation — spread of glucose values (mg/dL)',
+  'CV%': 'Coefficient of variation — SD÷Avg×100; target <36%',
+  'TIR%': 'Time in range 70–180 mg/dL; target ≥70%',
+  'TBR%': 'Time below range <70 mg/dL; target <4%',
+  'TAR%': 'Time above range >180 mg/dL; target <25%',
+}
+
+function ColHeader({ label, align = 'right' }: { label: string; align?: 'left' | 'right' }) {
+  const desc = COLUMN_DESCRIPTIONS[label]
+  if (!desc) {
+    return (
+      <th className={`py-2 pr-4 font-medium text-muted-foreground text-${align} last:pr-0`}>
+        {label}
+      </th>
+    )
+  }
+  return (
+    <th className={`py-2 pr-4 font-medium text-muted-foreground text-${align} last:pr-0`}>
+      <UITooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help underline decoration-dotted underline-offset-2">
+            {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="max-w-xs text-xs">{desc}</p>
+        </TooltipContent>
+      </UITooltip>
+    </th>
+  )
+}
+
 function WindowTable({ windows }: { windows: WindowStats[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b">
-            <th className="py-2 pr-4 text-left font-medium text-muted-foreground">Window</th>
-            <th className="py-2 pr-4 text-right font-medium text-muted-foreground">Readings</th>
-            <th className="py-2 pr-4 text-right font-medium text-muted-foreground">Avg</th>
-            <th className="py-2 pr-4 text-right font-medium text-muted-foreground">SD</th>
-            <th className="py-2 pr-4 text-right font-medium text-muted-foreground">CV%</th>
-            <th className="py-2 pr-4 text-right font-medium text-muted-foreground">TIR%</th>
-            <th className="py-2 pr-4 text-right font-medium text-muted-foreground">TBR%</th>
-            <th className="py-2 text-right font-medium text-muted-foreground">TAR%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {windows.map((w) => (
-            <tr key={w.window_days} className="border-b last:border-0">
-              <td className="py-2 pr-4 font-medium">{w.window_days}d</td>
-              <td className="py-2 pr-4 text-right">{w.reading_count}</td>
-              <td className="py-2 pr-4 text-right">{fmt(w.avg_glucose)}</td>
-              <td className="py-2 pr-4 text-right">{fmt(w.sd)}</td>
-              <td className="py-2 pr-4 text-right">{fmt(w.cv_pct)}</td>
-              <td className="py-2 pr-4 text-right">{fmt(w.tir_pct)}</td>
-              <td className="py-2 pr-4 text-right">{fmt(w.tbr_pct)}</td>
-              <td className="py-2 text-right">{fmt(w.tar_pct)}</td>
+    <TooltipProvider>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <ColHeader label="Window" align="left" />
+              <ColHeader label="Readings" />
+              <ColHeader label="Avg" />
+              <ColHeader label="SD" />
+              <ColHeader label="CV%" />
+              <ColHeader label="TIR%" />
+              <ColHeader label="TBR%" />
+              <ColHeader label="TAR%" />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {windows.map((w) => (
+              <tr key={w.window_days} className="border-b last:border-0">
+                <td className="py-2 pr-4 font-medium">{w.window_days}d</td>
+                <td className="py-2 pr-4 text-right">{w.reading_count}</td>
+                <td className="py-2 pr-4 text-right">{fmt(w.avg_glucose)}</td>
+                <td className="py-2 pr-4 text-right">{fmt(w.sd)}</td>
+                <td className="py-2 pr-4 text-right">{fmt(w.cv_pct)}</td>
+                <td className="py-2 pr-4 text-right">{fmt(w.tir_pct)}</td>
+                <td className="py-2 pr-4 text-right">{fmt(w.tbr_pct)}</td>
+                <td className="py-2 text-right">{fmt(w.tar_pct)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </TooltipProvider>
   )
 }
 

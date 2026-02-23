@@ -3,6 +3,7 @@ Pattern detection: dawn phenomenon, basal drift, exercise sensitivity,
 delayed carb absorption, stress resistance, basal misalignment,
 heart-rate/glucose correlation.
 """
+
 import statistics
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
@@ -39,10 +40,7 @@ def _pearson(x: list[float], y: list[float]) -> float:
         return 0.0
     mean_x = statistics.mean(x)
     mean_y = statistics.mean(y)
-    cov = sum(
-        (xi - mean_x) * (yi - mean_y)
-        for xi, yi in zip(x, y, strict=False)
-    )
+    cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y, strict=False))
     std_x = statistics.stdev(x)
     std_y = statistics.stdev(y)
     if std_x == 0 or std_y == 0:
@@ -278,8 +276,7 @@ def _detect_delayed_carb_absorption(db: Session) -> PatternItem:
             name="Delayed Carb Absorption",
             detected=False,
             description=(
-                f"Logged {len(meals)} meal(s) but insufficient "
-                "post-meal CGM coverage to evaluate."
+                f"Logged {len(meals)} meal(s) but insufficient post-meal CGM coverage to evaluate."
             ),
             confidence=None,
         )
@@ -386,9 +383,7 @@ def _detect_stress_resistance(db: Session) -> PatternItem:
                         .all()
                     )
                     if baseline_rows:
-                        baseline_avg = statistics.mean(
-                            r.glucose_mg_dl for r in baseline_rows
-                        )
+                        baseline_avg = statistics.mean(r.glucose_mg_dl for r in baseline_rows)
                         if baseline_avg <= 160:
                             stress_candidates += 1
             i = j
@@ -489,7 +484,7 @@ def _detect_basal_misalignment(db: Session) -> PatternItem:
         detected=detected,
         description=(
             f"Overnight glucose is consistently {direction} in "
-            f"{majority}/{evaluable_nights} nights ({round(directional_fraction*100)}%). "
+            f"{majority}/{evaluable_nights} nights ({round(directional_fraction * 100)}%). "
             f"{'Basal misalignment detected.' if detected else 'No consistent pattern.'}"
         ),
         confidence=confidence,
@@ -609,19 +604,17 @@ def update_pattern_history(db: Session, patterns: list[PatternItem]) -> None:
     for p in patterns:
         if not p.detected:
             continue
-        existing = (
-            db.query(PatternHistory)
-            .filter(PatternHistory.pattern_name == p.name)
-            .first()
-        )
+        existing = db.query(PatternHistory).filter(PatternHistory.pattern_name == p.name).first()
         if existing is None:
-            db.add(PatternHistory(
-                pattern_name=p.name,
-                first_detected_at=now,
-                last_detected_at=now,
-                detection_count=1,
-                last_confidence=p.confidence,
-            ))
+            db.add(
+                PatternHistory(
+                    pattern_name=p.name,
+                    first_detected_at=now,
+                    last_detected_at=now,
+                    detection_count=1,
+                    last_confidence=p.confidence,
+                )
+            )
         else:
             existing.last_detected_at = now
             existing.detection_count += 1

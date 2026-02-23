@@ -1,4 +1,5 @@
 """Integration tests for GET /api/v1/forecast."""
+
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -39,6 +40,7 @@ async def test_forecast_insufficient_data(client, db_session, tmp_path, monkeypa
     _add_readings(db_session, count=50)
 
     from app.services.forecasting import train_models
+
     assert train_models(db_session).success is False
 
     resp = await client.get("/api/v1/forecast")
@@ -53,6 +55,7 @@ async def test_forecast_with_trained_models(client, db_session, tmp_path, monkey
     _add_readings(db_session, count=400)
 
     from app.services.forecasting import train_models
+
     assert train_models(db_session).success is True
 
     resp = await client.get("/api/v1/forecast")
@@ -77,6 +80,7 @@ async def test_forecast_meta_populated(client, db_session, tmp_path, monkeypatch
     _add_readings(db_session, count=400)
 
     from app.services.forecasting import train_models
+
     train_models(db_session)
 
     resp = await client.get("/api/v1/forecast")
@@ -92,6 +96,7 @@ async def test_forecast_ci_bounds_ordered(client, db_session, tmp_path, monkeypa
     monkeypatch.setattr("app.services.forecasting._model_dir", lambda: tmp_path)
     _add_readings(db_session, count=400)
     from app.services.forecasting import train_models
+
     train_models(db_session)
 
     resp = await client.get("/api/v1/forecast")

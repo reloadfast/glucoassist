@@ -1,4 +1,5 @@
 """Integration tests for /api/v1/analytics/* routes."""
+
 from datetime import UTC, datetime, timedelta
 
 import pytest

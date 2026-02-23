@@ -1,4 +1,5 @@
 """Pure-function analytics: TIR, SD, CV, eAG, HbA1c — no DB access."""
+
 import statistics
 
 from app.schemas.analytics import WindowStats

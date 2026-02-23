@@ -1,9 +1,9 @@
 import os
 from logging.config import fileConfig
-from pathlib import Path
+
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
 
 config = context.config
 
@@ -16,8 +16,8 @@ if database_path:
     config.set_main_option("sqlalchemy.url", f"sqlite:///{database_path}")
 
 # Import Base.metadata after setting up path
-from app.db.base import Base  # noqa: E402
 import app.models  # noqa: E402, F401 — registers all models
+from app.db.base import Base  # noqa: E402
 
 target_metadata = Base.metadata
 

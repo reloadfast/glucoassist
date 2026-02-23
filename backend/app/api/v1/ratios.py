@@ -45,16 +45,16 @@ def get_ratios(
     for block in TIME_BLOCKS:
         icr_list = icr_samples[block]
         cf_list = cf_samples[block]
-        blocks.append(TimeBlockRatio(
-            block=block,
-            icr=_to_schema(_ci(icr_list) if len(icr_list) >= MIN_SAMPLES else None),
-            cf=_to_schema(_ci(cf_list) if len(cf_list) >= MIN_SAMPLES else None),
-            icr_samples=len(icr_list),
-            cf_samples=len(cf_list),
-            insufficient_data=(
-                len(icr_list) < MIN_SAMPLES and len(cf_list) < MIN_SAMPLES
-            ),
-        ))
+        blocks.append(
+            TimeBlockRatio(
+                block=block,
+                icr=_to_schema(_ci(icr_list) if len(icr_list) >= MIN_SAMPLES else None),
+                cf=_to_schema(_ci(cf_list) if len(cf_list) >= MIN_SAMPLES else None),
+                icr_samples=len(icr_list),
+                cf_samples=len(cf_list),
+                insufficient_data=(len(icr_list) < MIN_SAMPLES and len(cf_list) < MIN_SAMPLES),
+            )
+        )
     return RatiosResponse(
         blocks=blocks,
         days_analyzed=days,

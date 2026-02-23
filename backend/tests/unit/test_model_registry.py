@@ -1,4 +1,5 @@
 """Unit tests for model registry, A/B promotion, and TrainResult."""
+
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -16,16 +17,19 @@ from app.services.forecasting import (
 def _add_readings(db_session, count: int = 400, glucose: int = 120):
     base = datetime.now(UTC) - timedelta(minutes=count * 5)
     for i in range(count):
-        db_session.add(GlucoseReading(
-            timestamp=base + timedelta(minutes=i * 5),
-            glucose_mg_dl=glucose + (i % 10),
-            trend_arrow="Flat",
-            source="nightscout",
-        ))
+        db_session.add(
+            GlucoseReading(
+                timestamp=base + timedelta(minutes=i * 5),
+                glucose_mg_dl=glucose + (i % 10),
+                trend_arrow="Flat",
+                source="nightscout",
+            )
+        )
     db_session.commit()
 
 
 # ── _should_promote ────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 def test_promote_when_no_current_model():
@@ -53,6 +57,7 @@ def test_no_promote_when_equal():
 
 
 # ── Registry helpers ───────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 def test_load_registry_missing_file(tmp_path, monkeypatch):
@@ -82,6 +87,7 @@ def test_registry_truncates_at_50(tmp_path, monkeypatch):
 
 
 # ── TrainResult ────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 def test_train_result_insufficient_data(db_session, tmp_path, monkeypatch):
