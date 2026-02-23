@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # Forecasting: how often to retrain models (hours)
     retrain_interval_hours: int = 24
 
+    # Garmin integration
+    garmin_enabled: bool = False
+    garmin_username: str = ""
+    garmin_password: str = ""
+    garmin_ingest_interval_seconds: int = 3600
+
 
 @lru_cache
 def get_settings() -> Settings:

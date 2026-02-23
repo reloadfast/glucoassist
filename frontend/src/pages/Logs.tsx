@@ -209,10 +209,16 @@ export default function Logs() {
                           Weight (kg)
                         </th>
                         <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Sleep (h)
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Stress
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
                           Activity
                         </th>
                         <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                          Notes
+                          Source
                         </th>
                         <th className="py-2 text-left text-muted-foreground font-medium"></th>
                       </tr>
@@ -225,12 +231,16 @@ export default function Logs() {
                           </td>
                           <td className="py-2 pr-4 tabular-nums">{e.heart_rate_bpm ?? '—'}</td>
                           <td className="py-2 pr-4 tabular-nums">{e.weight_kg ?? '—'}</td>
+                          <td className="py-2 pr-4 tabular-nums">{e.sleep_hours ?? '—'}</td>
+                          <td className="py-2 pr-4 tabular-nums">{e.stress_level ?? '—'}</td>
                           <td className="py-2 pr-4">
                             {e.activity_type
                               ? `${e.activity_type}${e.activity_minutes != null ? ` (${e.activity_minutes}min)` : ''}`
                               : '—'}
                           </td>
-                          <td className="py-2 pr-4 text-muted-foreground">{e.notes ?? '—'}</td>
+                          <td className="py-2 pr-4 text-muted-foreground capitalize">
+                            {e.source ?? '—'}
+                          </td>
                           <td className="py-2">
                             <Button
                               variant="ghost"

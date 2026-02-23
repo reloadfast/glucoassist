@@ -9,6 +9,8 @@ class HealthMetricCreate(BaseModel):
     weight_kg: float | None = Field(default=None, ge=10.0, le=500.0)
     activity_type: str | None = None
     activity_minutes: int | None = Field(default=None, ge=0, le=1440)
+    sleep_hours: float | None = Field(default=None, ge=0.0, le=24.0)
+    stress_level: int | None = Field(default=None, ge=0, le=100)
     notes: str | None = None
 
 
@@ -19,6 +21,9 @@ class HealthMetricOut(BaseModel):
     weight_kg: float | None
     activity_type: str | None
     activity_minutes: int | None
+    sleep_hours: float | None
+    stress_level: int | None
+    source: str | None
     notes: str | None
     created_at: datetime
 

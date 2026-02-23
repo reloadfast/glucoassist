@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.db.session import SessionLocal
+from app.services.garmin_ingest import MIN_INTERVAL_SECONDS as GARMIN_MIN_INTERVAL
 from app.services.ingest import run_ingest
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,20 @@ def _retrain_job() -> None:
         db.close()
 
 
+def _garmin_job(settings: Settings) -> None:
+    from app.services.garmin_ingest import run_garmin_ingest
+
+    db: Session = SessionLocal()
+    try:
+        count = run_garmin_ingest(db, settings)
+        if count:
+            logger.info("Scheduled Garmin ingest completed: %d row inserted", count)
+    except Exception:
+        logger.exception("Unhandled error in scheduled Garmin ingest job")
+    finally:
+        db.close()
+
+
 def start_scheduler(settings: Settings) -> None:
     global _scheduler  # noqa: PLW0603
     _scheduler = BackgroundScheduler()
@@ -74,6 +89,18 @@ def start_scheduler(settings: Settings) -> None:
         replace_existing=True,
         next_run_time=None,  # startup training handled separately in main.py
     )
+    if settings.garmin_enabled:
+        garmin_interval = max(settings.garmin_ingest_interval_seconds, GARMIN_MIN_INTERVAL)
+        _scheduler.add_job(
+            _garmin_job,
+            trigger="interval",
+            seconds=garmin_interval,
+            args=[settings],
+            id="garmin_job",
+            replace_existing=True,
+            next_run_time=datetime.now(UTC),
+        )
+        logger.info("Garmin ingest job scheduled (interval=%ds)", garmin_interval)
     _scheduler.start()
     logger.info(
         "Scheduler started (ingest=%ds, source=%s, retrain=%dh)",
