@@ -2,20 +2,26 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useTimezone } from '@/components/TimezoneProvider'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
 import { postRetrain } from '@/lib/api'
 import type { RetrainLogEntry } from '@/lib/api'
-
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleString()
-}
+import { formatTs } from '@/lib/formatters'
 
 function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
+  const { tz } = useTimezone()
   const maes =
     entry.mae_h30 != null ? `${entry.mae_h30} / ${entry.mae_h60} / ${entry.mae_h120} mg/dL` : '—'
   return (
     <tr className="border-b last:border-0 text-sm">
-      <td className="py-2 pr-4 text-muted-foreground">{fmtDate(entry.triggered_at)}</td>
+      <td className="py-2 pr-4 text-muted-foreground">{formatTs(entry.triggered_at, tz)}</td>
       <td className="py-2 pr-4 capitalize">{entry.trigger_source}</td>
       <td className="py-2 pr-4">{entry.success ? 'Yes' : 'No'}</td>
       <td className="py-2 pr-4 tabular-nums">{maes}</td>
@@ -26,6 +32,7 @@ function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
 
 export default function Settings() {
   const { meta, retrainLog, loading, refresh } = useModelRegistry()
+  const { tz, setTz } = useTimezone()
   const [retraining, setRetraining] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -60,7 +67,7 @@ export default function Settings() {
           ) : (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
               <dt className="text-muted-foreground">Last trained</dt>
-              <dd>{meta?.last_trained ? fmtDate(meta.last_trained) : '—'}</dd>
+              <dd>{meta?.last_trained ? formatTs(meta.last_trained, tz) : '—'}</dd>
               <dt className="text-muted-foreground">Training samples</dt>
               <dd>{meta?.training_samples ?? '—'}</dd>
               <dt className="text-muted-foreground">MAE (30 / 60 / 120 min)</dt>
@@ -124,6 +131,27 @@ export default function Settings() {
           ) : (
             <p className="text-sm text-muted-foreground">No retrain events yet.</p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Display</CardTitle>
+          <CardDescription>Timestamp display preference across all pages</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <span className="text-sm">Timezone</span>
+            <Select value={tz} onValueChange={(v) => setTz(v as 'local' | 'utc')}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="local">Local time</SelectItem>
+                <SelectItem value="utc">UTC</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
     </div>

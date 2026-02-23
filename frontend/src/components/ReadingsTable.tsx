@@ -1,5 +1,3 @@
-import { format } from 'date-fns'
-
 import {
   Table,
   TableBody,
@@ -8,7 +6,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useTimezone } from '@/components/TimezoneProvider'
 import type { GlucoseReading } from '@/lib/api'
+import { formatTs } from '@/lib/formatters'
 
 interface Props {
   readings: GlucoseReading[]
@@ -21,6 +21,8 @@ function glucoseClass(value: number): string {
 }
 
 export default function ReadingsTable({ readings }: Props) {
+  const { tz } = useTimezone()
+
   if (readings.length === 0) {
     return <p className="text-sm text-muted-foreground py-4 text-center">No readings yet</p>
   }
@@ -39,7 +41,7 @@ export default function ReadingsTable({ readings }: Props) {
         {readings.slice(0, 20).map((r) => (
           <TableRow key={r.id}>
             <TableCell className="text-sm text-muted-foreground">
-              {format(new Date(r.timestamp), 'MMM d, HH:mm')}
+              {formatTs(r.timestamp, tz)}
             </TableCell>
             <TableCell className={glucoseClass(r.glucose_mg_dl)}>{r.glucose_mg_dl} mg/dL</TableCell>
             <TableCell>{r.trend_arrow ?? '—'}</TableCell>

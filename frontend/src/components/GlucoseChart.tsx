@@ -21,12 +21,19 @@ interface ChartPoint {
   ci_upper?: number
 }
 
+export interface EventMarker {
+  id: number
+  timestamp: string
+  type: 'insulin' | 'meal'
+}
+
 interface Props {
   readings: GlucoseReading[]
   forecasts?: HorizonForecast[]
+  eventMarkers?: EventMarker[]
 }
 
-export default function GlucoseChart({ readings, forecasts = [] }: Props) {
+export default function GlucoseChart({ readings, forecasts = [], eventMarkers = [] }: Props) {
   if (readings.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
@@ -69,6 +76,7 @@ export default function GlucoseChart({ readings, forecasts = [] }: Props) {
   ]
 
   const hasForecast = forecasts.length > 0
+  const hasMarkers = eventMarkers.length > 0
 
   return (
     <ResponsiveContainer width="100%" height={240}>
@@ -148,6 +156,22 @@ export default function GlucoseChart({ readings, forecasts = [] }: Props) {
             isAnimationActive={false}
           />
         )}
+
+        {/* Event markers */}
+        {hasMarkers &&
+          eventMarkers.map((ev) => (
+            <ReferenceLine
+              key={`${ev.type}-${ev.id}`}
+              x={format(new Date(ev.timestamp), 'HH:mm')}
+              stroke={ev.type === 'insulin' ? '#8b5cf6' : '#f59e0b'}
+              strokeDasharray="3 3"
+              label={{
+                value: ev.type === 'insulin' ? 'I' : 'M',
+                position: 'top',
+                fontSize: 10,
+              }}
+            />
+          ))}
       </ComposedChart>
     </ResponsiveContainer>
   )

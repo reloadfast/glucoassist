@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import GlucoseChart from '@/components/GlucoseChart'
+import GlucoseChart, { type EventMarker } from '@/components/GlucoseChart'
 import LogButtons from '@/components/LogButtons'
 import ReadingsTable from '@/components/ReadingsTable'
 import RiskAlertCard from '@/components/RiskAlertCard'
 import { useForecast } from '@/hooks/useForecast'
 import { useGlucoseData } from '@/hooks/useGlucoseData'
-import { postBackfill } from '@/lib/api'
+import { getInsulinLog, getMealLog, postBackfill } from '@/lib/api'
 
 const BACKFILL_OPTIONS = [30, 60, 90] as const
 
@@ -17,6 +17,25 @@ export default function Dashboard() {
   const { forecast } = useForecast()
   const [backfilling, setBackfilling] = useState(false)
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
+  const [eventMarkers, setEventMarkers] = useState<EventMarker[]>([])
+
+  // Fetch insulin + meal events for the last 24h to overlay on the chart
+  useEffect(() => {
+    const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    Promise.all([getInsulinLog({ from, limit: 100 }), getMealLog({ from, limit: 100 })])
+      .then(([insulinData, mealData]) => {
+        const markers: EventMarker[] = [
+          ...insulinData.entries.map((e) => ({ id: e.id, timestamp: e.timestamp, type: 'insulin' as const })),
+          ...mealData.entries.map((e) => ({ id: e.id, timestamp: e.timestamp, type: 'meal' as const })),
+        ]
+        setEventMarkers(markers)
+      })
+      .catch(() => {
+        // non-critical: silently ignore
+      })
+  }, [])
+
+  const stableMarkers = useMemo(() => eventMarkers, [eventMarkers])
 
   const latest = summary?.latest_reading
   const trendArrow = latest?.trend_arrow ?? '→'
@@ -130,7 +149,7 @@ export default function Dashboard() {
           <CardDescription>Last 24 hours</CardDescription>
         </CardHeader>
         <CardContent>
-          <GlucoseChart readings={readings} forecasts={forecast?.forecasts ?? []} />
+          <GlucoseChart readings={readings} forecasts={forecast?.forecasts ?? []} eventMarkers={stableMarkers} />
         </CardContent>
       </Card>
 
