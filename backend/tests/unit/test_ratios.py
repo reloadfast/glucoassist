@@ -1,4 +1,5 @@
 """Unit tests for ICR/CF ratio estimation service."""
+
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -15,26 +16,31 @@ from app.services.ratios import (
 
 # ── _block_for_hour ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
-@pytest.mark.parametrize("hour,expected", [
-    (0, "overnight"),
-    (3, "overnight"),
-    (5, "overnight"),
-    (6, "breakfast"),
-    (9, "breakfast"),
-    (10, "breakfast"),
-    (11, "lunch"),
-    (13, "lunch"),
-    (14, "lunch"),
-    (15, "dinner"),
-    (20, "dinner"),
-    (23, "dinner"),
-])
+@pytest.mark.parametrize(
+    "hour,expected",
+    [
+        (0, "overnight"),
+        (3, "overnight"),
+        (5, "overnight"),
+        (6, "breakfast"),
+        (9, "breakfast"),
+        (10, "breakfast"),
+        (11, "lunch"),
+        (13, "lunch"),
+        (14, "lunch"),
+        (15, "dinner"),
+        (20, "dinner"),
+        (23, "dinner"),
+    ],
+)
 def test_block_for_hour(hour, expected):
     assert _block_for_hour(hour) == expected
 
 
 # ── _ci ───────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 def test_ci_single_sample():
@@ -55,6 +61,7 @@ def test_ci_multiple_samples():
 
 # ── compute_ratios empty DB ───────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 def test_compute_ratios_empty_db(db_session):
     result = compute_ratios(db_session, days=90)
@@ -67,6 +74,7 @@ def test_compute_ratios_empty_db(db_session):
 
 # ── ICR computation ───────────────────────────────────────────────────────────
 
+
 def _seed_meal_dose_pair(
     db_session, at: datetime, carbs: float, units: float, glucose_before: int = 130
 ):
@@ -78,12 +86,14 @@ def _seed_meal_dose_pair(
 
     # 4 post-meal glucose readings
     for i in range(4):
-        db_session.add(GlucoseReading(
-            timestamp=at + timedelta(minutes=30 * (i + 1)),
-            glucose_mg_dl=glucose_before - 5,
-            trend_arrow="Flat",
-            source="nightscout",
-        ))
+        db_session.add(
+            GlucoseReading(
+                timestamp=at + timedelta(minutes=30 * (i + 1)),
+                glucose_mg_dl=glucose_before - 5,
+                trend_arrow="Flat",
+                source="nightscout",
+            )
+        )
     db_session.commit()
 
 
@@ -122,29 +132,32 @@ def test_icr_computed_with_sufficient_data(db_session):
 
 # ── CF computation ────────────────────────────────────────────────────────────
 
-def _seed_correction_pair(
-    db_session, at: datetime, pre_glucose: int, nadir: int, units: float
-):
+
+def _seed_correction_pair(db_session, at: datetime, pre_glucose: int, nadir: int, units: float):
     """Seed a correction dose (no nearby meal) + pre/post glucose."""
     dose = InsulinDose(timestamp=at, units=units, type="rapid")
     db_session.add(dose)
 
     # Pre-dose readings
     for i in range(3):
-        db_session.add(GlucoseReading(
-            timestamp=at - timedelta(minutes=25 - i * 10),
-            glucose_mg_dl=pre_glucose,
-            trend_arrow="Flat",
-            source="nightscout",
-        ))
+        db_session.add(
+            GlucoseReading(
+                timestamp=at - timedelta(minutes=25 - i * 10),
+                glucose_mg_dl=pre_glucose,
+                trend_arrow="Flat",
+                source="nightscout",
+            )
+        )
 
     # Post-dose nadir
-    db_session.add(GlucoseReading(
-        timestamp=at + timedelta(hours=2),
-        glucose_mg_dl=nadir,
-        trend_arrow="Flat",
-        source="nightscout",
-    ))
+    db_session.add(
+        GlucoseReading(
+            timestamp=at + timedelta(hours=2),
+            glucose_mg_dl=nadir,
+            trend_arrow="Flat",
+            source="nightscout",
+        )
+    )
     db_session.commit()
 
 
@@ -161,11 +174,13 @@ def test_cf_excludes_dose_near_meal(db_session):
     now = datetime.now(UTC).replace(hour=12)
     # Add a meal and dose close together
     db_session.add(Meal(timestamp=now - timedelta(days=1), carbs_g=50))
-    db_session.add(InsulinDose(
-        timestamp=now - timedelta(days=1, minutes=15),
-        units=5.0,
-        type="rapid",
-    ))
+    db_session.add(
+        InsulinDose(
+            timestamp=now - timedelta(days=1, minutes=15),
+            units=5.0,
+            type="rapid",
+        )
+    )
     db_session.commit()
     result = compute_ratios(db_session, days=90)
     lunch = next(b for b in result["blocks"] if b["block"] == "lunch")
@@ -173,6 +188,7 @@ def test_cf_excludes_dose_near_meal(db_session):
 
 
 # ── API integration ───────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_ratios_endpoint_empty(client):

@@ -11,6 +11,7 @@ Time blocks:
   lunch:      11:00–14:59
   dinner:     15:00–23:59
 """
+
 import math
 import statistics
 from datetime import UTC, datetime, timedelta
@@ -22,17 +23,17 @@ from app.models.glucose import GlucoseReading
 from app.models.insulin import InsulinDose
 from app.models.meal import Meal
 
-MIN_SAMPLES = 5          # minimum paired observations per block before surfacing estimate
-MEAL_WINDOW_MIN = 30     # ±minutes to associate a rapid dose with a meal
+MIN_SAMPLES = 5  # minimum paired observations per block before surfacing estimate
+MEAL_WINDOW_MIN = 30  # ±minutes to associate a rapid dose with a meal
 CORRECTION_GAP_MIN = 60  # no meal within this window → correction dose
-RESPONSE_HOURS = 3       # post-event glucose observation window
-Z90 = 1.645              # z-score for 90% CI
+RESPONSE_HOURS = 3  # post-event glucose observation window
+Z90 = 1.645  # z-score for 90% CI
 
 TIME_BLOCKS: dict[str, tuple[int, int]] = {
     "overnight": (0, 6),
     "breakfast": (6, 11),
-    "lunch":     (11, 15),
-    "dinner":    (15, 24),
+    "lunch": (11, 15),
+    "dinner": (15, 24),
 }
 
 
@@ -82,8 +83,7 @@ def _ci(samples: list[float]) -> RatioEstimate:
     n = len(samples)
     mu = statistics.mean(samples)
     if n < 2:
-        return RatioEstimate(mean=round(mu, 2), ci_lower=round(mu, 2),
-                             ci_upper=round(mu, 2), n=n)
+        return RatioEstimate(mean=round(mu, 2), ci_lower=round(mu, 2), ci_upper=round(mu, 2), n=n)
     std = statistics.stdev(samples)
     half = Z90 * std / math.sqrt(n)
     return RatioEstimate(
@@ -94,9 +94,7 @@ def _ci(samples: list[float]) -> RatioEstimate:
     )
 
 
-def _collect_icr_samples(
-    db: Session, since: datetime
-) -> dict[str, list[float]]:
+def _collect_icr_samples(db: Session, since: datetime) -> dict[str, list[float]]:
     """
     For each meal, find the closest rapid dose within ±MEAL_WINDOW_MIN.
     Yield carbs_g / insulin_units for pairings with ≥3 post-meal glucose readings.
@@ -146,9 +144,7 @@ def _collect_icr_samples(
     return samples
 
 
-def _collect_cf_samples(
-    db: Session, since: datetime
-) -> dict[str, list[float]]:
+def _collect_cf_samples(db: Session, since: datetime) -> dict[str, list[float]]:
     """
     For each rapid dose with NO meal within CORRECTION_GAP_MIN,
     compute glucose drop: pre_avg - nadir over RESPONSE_HOURS.
@@ -215,14 +211,14 @@ def compute_ratios(db: Session, days: int = 90) -> dict[str, object]:
         cf_list = cf_samples[block]
         icr_est = _ci(icr_list) if len(icr_list) >= MIN_SAMPLES else None
         cf_est = _ci(cf_list) if len(cf_list) >= MIN_SAMPLES else None
-        blocks.append({
-            "block": block,
-            "icr": icr_est,
-            "cf": cf_est,
-            "icr_samples": len(icr_list),
-            "cf_samples": len(cf_list),
-            "insufficient_data": (
-                len(icr_list) < MIN_SAMPLES and len(cf_list) < MIN_SAMPLES
-            ),
-        })
+        blocks.append(
+            {
+                "block": block,
+                "icr": icr_est,
+                "cf": cf_est,
+                "icr_samples": len(icr_list),
+                "cf_samples": len(cf_list),
+                "insufficient_data": (len(icr_list) < MIN_SAMPLES and len(cf_list) < MIN_SAMPLES),
+            }
+        )
     return {"blocks": blocks}

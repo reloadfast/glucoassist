@@ -1,4 +1,5 @@
 """Unit tests for pattern detection services."""
+
 from datetime import UTC, datetime, timedelta
 
 import pytest

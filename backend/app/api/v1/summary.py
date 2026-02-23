@@ -18,17 +18,9 @@ def get_summary(db: Session = Depends(get_db)) -> SummaryResponse:
     now = datetime.now(tz=UTC)
     since = now - timedelta(hours=24)
 
-    latest = (
-        db.query(GlucoseReading)
-        .order_by(GlucoseReading.timestamp.desc())
-        .first()
-    )
+    latest = db.query(GlucoseReading).order_by(GlucoseReading.timestamp.desc()).first()
 
-    readings_24h = (
-        db.query(GlucoseReading)
-        .filter(GlucoseReading.timestamp >= since)
-        .all()
-    )
+    readings_24h = db.query(GlucoseReading).filter(GlucoseReading.timestamp >= since).all()
 
     if not readings_24h:
         return SummaryResponse(

@@ -16,11 +16,7 @@ WINDOWS = [30, 60, 90]
 
 def _glucose_values(db: Session, days: int) -> list[int]:
     since = datetime.now(UTC) - timedelta(days=days)
-    rows = (
-        db.query(GlucoseReading.glucose_mg_dl)
-        .filter(GlucoseReading.timestamp >= since)
-        .all()
-    )
+    rows = db.query(GlucoseReading.glucose_mg_dl).filter(GlucoseReading.timestamp >= since).all()
     return [r.glucose_mg_dl for r in rows]
 
 
@@ -54,11 +50,7 @@ def get_patterns(db: Session = Depends(get_db)) -> PatternsResponse:  # noqa: B0
 def get_pattern_history(db: Session = Depends(get_db)) -> dict:  # noqa: B008
     from app.models.pattern_history import PatternHistory
 
-    rows = (
-        db.query(PatternHistory)
-        .order_by(PatternHistory.last_detected_at.desc())
-        .all()
-    )
+    rows = db.query(PatternHistory).order_by(PatternHistory.last_detected_at.desc()).all()
     return {
         "history": [
             {

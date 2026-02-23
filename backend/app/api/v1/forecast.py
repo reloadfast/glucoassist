@@ -75,12 +75,7 @@ def get_retrain_log(
 ) -> dict:
     from app.models.retrain_log import RetrainLog
 
-    rows = (
-        db.query(RetrainLog)
-        .order_by(RetrainLog.triggered_at.desc())
-        .limit(limit)
-        .all()
-    )
+    rows = db.query(RetrainLog).order_by(RetrainLog.triggered_at.desc()).limit(limit).all()
     return {
         "entries": [
             {

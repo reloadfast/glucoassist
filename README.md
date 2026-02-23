@@ -72,10 +72,34 @@ How to find your `API_SECRET`:
 Requirements: the secret must be **at least 12 characters**. Leave `NIGHTSCOUT_TOKEN`
 blank only if your Nightscout instance runs without authentication (not recommended).
 
+## Environment Variables Reference
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `CGM_SOURCE` | no | `nightscout` | `librelink` or `nightscout` |
+| `LIBRELINK_URL` | if librelink | — | Base URL of nightscout-librelink-up |
+| `LIBRELINK_POLL_INTERVAL` | no | `300` | Ingest interval (seconds) |
+| `NIGHTSCOUT_URL` | if nightscout | — | Nightscout base URL |
+| `NIGHTSCOUT_TOKEN` | no | — | Nightscout `API_SECRET` |
+| `INGEST_INTERVAL_SECONDS` | no | `300` | Scheduler interval (seconds) |
+| `DATABASE_PATH` | no | `/data/glucosense.db` | SQLite file path inside container |
+| `APP_SECRET_KEY` | yes | — | Random secret for FastAPI sessions |
+| `RETRAIN_INTERVAL_HOURS` | no | `24` | Forecast model retrain frequency |
+
+See `.env.example` for a ready-to-fill template.
+
+## Unraid
+
+Import `unraid/GlucoSense.xml` via Community Applications → Install from template URL, or place the XML in `/boot/config/plugins/community.applications/AppsData/` manually.
+
+## Data
+
+All data is stored in a single SQLite file at `DATABASE_PATH`. Mount a persistent Docker volume to preserve data across container restarts. No data leaves your host.
+
 ## Development
 
-See `CONTRIBUTING.md` (coming soon) for local dev setup.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local dev setup, branching conventions, and PR guidelines.
 
 ## License
 
-TBD — private repository for now.
+[MIT](LICENSE)

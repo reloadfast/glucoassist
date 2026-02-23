@@ -3,15 +3,15 @@ import { describe, expect, it } from 'vitest'
 import App from '@/App'
 
 describe('App', () => {
-  it('renders the dashboard heading', () => {
+  it('renders the nav header', () => {
     render(<App />)
     expect(screen.getByText('GlucoSense')).toBeInTheDocument()
   })
 
-  it('renders the three stat cards', () => {
+  it('renders nav links', () => {
     render(<App />)
-    expect(screen.getByText('Latest Reading')).toBeInTheDocument()
-    expect(screen.getByText('Trend')).toBeInTheDocument()
-    expect(screen.getByText('Time in Range (24h)')).toBeInTheDocument()
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Statistics')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 })

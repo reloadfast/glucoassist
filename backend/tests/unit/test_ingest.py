@@ -8,14 +8,25 @@ from app.services.ingest import parse_entry, run_ingest
 NOW_MS = int(datetime(2026, 2, 23, 12, 0, 0, tzinfo=UTC).timestamp() * 1000)
 
 SGV_FLAT = {
-    "type": "sgv", "sgv": 120, "date": NOW_MS, "direction": "Flat", "device": "libre-sensor"
+    "type": "sgv",
+    "sgv": 120,
+    "date": NOW_MS,
+    "direction": "Flat",
+    "device": "libre-sensor",
 }
 SGV_SINGLE_UP = {
-    "type": "sgv", "sgv": 140, "date": NOW_MS + 300000,
-    "direction": "SingleUp", "device": "device-x",
+    "type": "sgv",
+    "sgv": 140,
+    "date": NOW_MS + 300000,
+    "direction": "SingleUp",
+    "device": "device-x",
 }
 SGV_DOUBLE_DOWN = {
-    "type": "sgv", "sgv": 65, "date": NOW_MS + 600000, "direction": "DoubleDown", "device": None
+    "type": "sgv",
+    "sgv": 65,
+    "date": NOW_MS + 600000,
+    "direction": "DoubleDown",
+    "device": None,
 }
 NON_SGV = {"type": "mbg", "mbg": 110, "date": NOW_MS}
 NO_SGV_VALUE = {"type": "sgv", "date": NOW_MS}

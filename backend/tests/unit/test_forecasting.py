@@ -1,4 +1,5 @@
 """Unit tests for forecasting service — pure logic, no DB access."""
+
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -75,12 +76,22 @@ def test_risk_level_thresholds(p, expected):
 def test_overall_risk_returns_worst():
     forecasts = [
         HorizonForecast(
-            horizon_min=30, predicted_mg_dl=110, ci_lower=90, ci_upper=130,
-            p_hypo=0.01, p_hyper=0.01, risk_level="low",
+            horizon_min=30,
+            predicted_mg_dl=110,
+            ci_lower=90,
+            ci_upper=130,
+            p_hypo=0.01,
+            p_hyper=0.01,
+            risk_level="low",
         ),
         HorizonForecast(
-            horizon_min=60, predicted_mg_dl=200, ci_lower=180, ci_upper=220,
-            p_hypo=0.01, p_hyper=0.30, risk_level="high",
+            horizon_min=60,
+            predicted_mg_dl=200,
+            ci_lower=180,
+            ci_upper=220,
+            p_hypo=0.01,
+            p_hyper=0.30,
+            risk_level="high",
         ),
     ]
     assert _overall_risk(forecasts) == "high"

@@ -9,6 +9,7 @@ Risk: P(hypo < 70) and P(hyper > 250) via normal CDF from math.erfc (stdlib only
 Storage: joblib files alongside the SQLite DB file.
 Registry: JSON manifest of training runs; A/B promotion guards live models.
 """
+
 import json
 import logging
 import math
@@ -49,6 +50,7 @@ REGISTRY_MAX_ENTRIES = 50
 
 # ── Return type for train_models ───────────────────────────────────────────────
 
+
 class TrainResult(NamedTuple):
     success: bool
     promoted: bool
@@ -58,6 +60,7 @@ class TrainResult(NamedTuple):
 
 
 # ── Path helpers ───────────────────────────────────────────────────────────────
+
 
 def _model_dir() -> Path:
     settings = get_settings()
@@ -85,6 +88,7 @@ def models_exist() -> bool:
 
 
 # ── Registry helpers ───────────────────────────────────────────────────────────
+
 
 def _load_registry() -> list[dict]:
     p = _registry_path()
@@ -128,6 +132,7 @@ def _should_promote(
 
 # ── Feature engineering ────────────────────────────────────────────────────────
 
+
 def _make_features(values: list[float], timestamps: list[datetime]) -> np.ndarray:
     """
     Build feature matrix from a chronologically sorted glucose series.
@@ -150,16 +155,23 @@ def _make_features(values: list[float], timestamps: list[datetime]) -> np.ndarra
         ts = timestamps[i]
         hour_frac = ts.hour + ts.minute / 60.0
         wd = ts.weekday()
-        rows.append([
-            w[0], w[1], w[2], w[3], w[4], w[5],
-            w[5] - w[4],          # 5-min delta
-            w[5] - w[3],          # 10-min delta
-            (w[5] - w[0]) / 5.0,  # avg rate
-            math.sin(2 * math.pi * hour_frac / 24.0),
-            math.cos(2 * math.pi * hour_frac / 24.0),
-            math.sin(2 * math.pi * wd / 7.0),
-            math.cos(2 * math.pi * wd / 7.0),
-        ])
+        rows.append(
+            [
+                w[0],
+                w[1],
+                w[2],
+                w[3],
+                w[4],
+                w[5],
+                w[5] - w[4],  # 5-min delta
+                w[5] - w[3],  # 10-min delta
+                (w[5] - w[0]) / 5.0,  # avg rate
+                math.sin(2 * math.pi * hour_frac / 24.0),
+                math.cos(2 * math.pi * hour_frac / 24.0),
+                math.sin(2 * math.pi * wd / 7.0),
+                math.cos(2 * math.pi * wd / 7.0),
+            ]
+        )
     return np.array(rows, dtype=np.float64)
 
 
@@ -173,6 +185,7 @@ def _make_targets(values: list[float], n_steps: int) -> np.ndarray:
 
 # ── Internal model container ───────────────────────────────────────────────────
 
+
 class _HorizonModel:
     """Bundles a fitted Ridge + StandardScaler + residual_std for one horizon."""
 
@@ -184,9 +197,8 @@ class _HorizonModel:
 
 # ── Training ───────────────────────────────────────────────────────────────────
 
-def train_models(
-    db: Session, trigger_source: str = "scheduled"
-) -> TrainResult:
+
+def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
     """
     Fetch all readings, train Ridge models for all three horizons.
 
@@ -261,7 +273,9 @@ def train_models(
         candidate_maes[f"h{horizon_min}"] = round(mae, 2)
         logger.info(
             "Forecasting: trained candidate h%d  MAE=%.2f  residual_std=%.2f",
-            horizon_min, mae, residual_std,
+            horizon_min,
+            mae,
+            residual_std,
         )
 
     current_maes = _current_mae()
@@ -282,9 +296,9 @@ def train_models(
             if current_maes is None
             else (
                 f"Promoted: mean MAE "
-                f"{round(sum(candidate_maes.values())/len(candidate_maes),2)}"
+                f"{round(sum(candidate_maes.values()) / len(candidate_maes), 2)}"
                 f" < current "
-                f"{round(sum(current_maes.values())/len(current_maes),2)}"
+                f"{round(sum(current_maes.values()) / len(current_maes), 2)}"
             )
         )
         logger.info("Forecasting: candidate promoted — %s", notes)
@@ -292,20 +306,19 @@ def train_models(
         _cleanup_candidates()
         cur_mean = round(sum(current_maes.values()) / len(current_maes), 2) if current_maes else 0
         cand_mean = round(sum(candidate_maes.values()) / len(candidate_maes), 2)
-        notes = (
-            f"Not promoted: candidate mean MAE {cand_mean}"
-            f" >= current {cur_mean}"
-        )
+        notes = f"Not promoted: candidate mean MAE {cand_mean} >= current {cur_mean}"
         logger.info("Forecasting: candidate not promoted — %s", notes)
 
-    _append_registry({
-        "version_id": trained_at,
-        "training_samples": len(rows),
-        "mae_per_horizon": candidate_maes,
-        "promoted": promoted,
-        "trained_at": trained_at,
-        "trigger_source": trigger_source,
-    })
+    _append_registry(
+        {
+            "version_id": trained_at,
+            "training_samples": len(rows),
+            "mae_per_horizon": candidate_maes,
+            "promoted": promoted,
+            "trained_at": trained_at,
+            "trigger_source": trigger_source,
+        }
+    )
 
     return TrainResult(
         success=True,
@@ -324,6 +337,7 @@ def _cleanup_candidates() -> None:
 
 
 # ── Risk math (stdlib only) ────────────────────────────────────────────────────
+
 
 def _normal_cdf(x: float, mu: float, sigma: float) -> float:
     """P(X ≤ x) for X ~ N(mu, sigma) via math.erfc. No scipy required."""
@@ -348,6 +362,7 @@ def _overall_risk(forecasts: list[HorizonForecast]) -> str:
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────
+
 
 def _load_meta() -> ModelMeta:
     p = _meta_path()
@@ -386,9 +401,7 @@ def get_forecast(db: Session) -> ForecastResponse:
     rows = list(reversed(rows))  # chronological asc
 
     if len(rows) < 6:  # noqa: PLR2004
-        return ForecastResponse(
-            model_trained=True, forecasts=[], overall_risk="unknown", meta=meta
-        )
+        return ForecastResponse(model_trained=True, forecasts=[], overall_risk="unknown", meta=meta)
 
     values = [float(r.glucose_mg_dl) for r in rows]
     timestamps = [r.timestamp for r in rows]
@@ -402,9 +415,7 @@ def get_forecast(db: Session) -> ForecastResponse:
         x_latest = X_all[-1].reshape(1, -1)
     except Exception:
         logger.exception("Forecasting: feature engineering failed during inference")
-        return ForecastResponse(
-            model_trained=True, forecasts=[], overall_risk="unknown", meta=meta
-        )
+        return ForecastResponse(model_trained=True, forecasts=[], overall_risk="unknown", meta=meta)
 
     forecasts: list[HorizonForecast] = []
     for horizon_min in sorted(HORIZONS):
@@ -420,15 +431,17 @@ def get_forecast(db: Session) -> ForecastResponse:
             p_hyper = 1.0 - _normal_cdf(HYPER_THRESHOLD, predicted, std)
             risk_level = _risk_level(max(p_hypo, p_hyper))
 
-            forecasts.append(HorizonForecast(
-                horizon_min=horizon_min,
-                predicted_mg_dl=round(predicted, 1),
-                ci_lower=round(ci_lower, 1),
-                ci_upper=round(ci_upper, 1),
-                p_hypo=round(p_hypo, 4),
-                p_hyper=round(p_hyper, 4),
-                risk_level=risk_level,
-            ))
+            forecasts.append(
+                HorizonForecast(
+                    horizon_min=horizon_min,
+                    predicted_mg_dl=round(predicted, 1),
+                    ci_lower=round(ci_lower, 1),
+                    ci_upper=round(ci_upper, 1),
+                    p_hypo=round(p_hypo, 4),
+                    p_hyper=round(p_hyper, 4),
+                    risk_level=risk_level,
+                )
+            )
         except Exception:
             logger.exception("Forecasting: inference failed for h%d", horizon_min)
 
