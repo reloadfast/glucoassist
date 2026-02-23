@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import GlucoseChart from '@/components/GlucoseChart'
 import LogButtons from '@/components/LogButtons'
 import ReadingsTable from '@/components/ReadingsTable'
+import RiskAlertCard from '@/components/RiskAlertCard'
+import { useForecast } from '@/hooks/useForecast'
 import { useGlucoseData } from '@/hooks/useGlucoseData'
 import { postBackfill } from '@/lib/api'
 
@@ -12,6 +14,7 @@ const BACKFILL_OPTIONS = [30, 60, 90] as const
 
 export default function Dashboard() {
   const { summary, readings, loading, error, refresh } = useGlucoseData()
+  const { forecast } = useForecast()
   const [backfilling, setBackfilling] = useState(false)
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
 
@@ -119,13 +122,15 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {forecast && <RiskAlertCard forecast={forecast} />}
+
       <Card>
         <CardHeader>
           <CardTitle>Glucose Chart</CardTitle>
           <CardDescription>Last 24 hours</CardDescription>
         </CardHeader>
         <CardContent>
-          <GlucoseChart readings={readings} />
+          <GlucoseChart readings={readings} forecasts={forecast?.forecasts ?? []} />
         </CardContent>
       </Card>
 
