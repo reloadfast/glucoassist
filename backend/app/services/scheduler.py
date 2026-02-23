@@ -24,6 +24,21 @@ def _ingest_job(settings: Settings) -> None:
         db.close()
 
 
+def _retrain_job() -> None:
+    db: Session = SessionLocal()
+    try:
+        from app.services.forecasting import train_models  # deferred to avoid circular import
+
+        success = train_models(db)
+        logger.info(
+            "Scheduled retrain %s", "completed" if success else "skipped (insufficient data)"
+        )
+    except Exception:
+        logger.exception("Unhandled error in scheduled retrain job")
+    finally:
+        db.close()
+
+
 def start_scheduler(settings: Settings) -> None:
     global _scheduler  # noqa: PLW0603
     _scheduler = BackgroundScheduler()
@@ -36,9 +51,17 @@ def start_scheduler(settings: Settings) -> None:
         replace_existing=True,
         next_run_time=datetime.now(UTC),  # run immediately on startup
     )
+    _scheduler.add_job(
+        _retrain_job,
+        trigger="interval",
+        hours=24,
+        id="retrain_job",
+        replace_existing=True,
+        next_run_time=None,  # startup training handled separately in main.py
+    )
     _scheduler.start()
     logger.info(
-        "Ingest scheduler started (interval=%ds, source=%s)",
+        "Scheduler started (ingest=%ds, source=%s, retrain=24h)",
         settings.ingest_interval_seconds,
         settings.cgm_source,
     )

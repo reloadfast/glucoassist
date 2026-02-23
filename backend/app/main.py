@@ -13,6 +13,25 @@ from app.core.logger import setup_logging
 logger = logging.getLogger(__name__)
 
 
+def _maybe_train_models() -> None:
+    """Run in a background thread: train forecast models if not yet persisted."""
+    from app.db.session import SessionLocal
+    from app.services.forecasting import models_exist, train_models
+
+    if models_exist():
+        logger.info("Forecasting: models already exist — skipping startup training")
+        return
+
+    db = SessionLocal()
+    try:
+        logger.info("Forecasting: no models found — starting initial training")
+        train_models(db)
+    except Exception:
+        logger.exception("Forecasting: unhandled error during startup training")
+    finally:
+        db.close()
+
+
 def _maybe_backfill(settings) -> None:  # type: ignore[type-arg]
     """Run in a background thread: backfill history if DB is empty and configured."""
     from app.db.session import SessionLocal
@@ -52,6 +71,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Kick off historical backfill in background so it doesn't block startup
     threading.Thread(target=_maybe_backfill, args=(settings,), daemon=True, name="backfill").start()
+    # Train forecast models if not yet present
+    threading.Thread(target=_maybe_train_models, daemon=True, name="train_models").start()
 
     yield
     stop_scheduler()

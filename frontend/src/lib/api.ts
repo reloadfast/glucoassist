@@ -134,6 +134,35 @@ export function postBackfill(days = 90): Promise<BackfillResponse> {
   return apiFetch<BackfillResponse>(`/ingest/backfill?days=${days}`, { method: 'POST' })
 }
 
+// ─── Forecast ─────────────────────────────────────────────────────────────────
+
+export interface HorizonForecast {
+  horizon_min: number
+  predicted_mg_dl: number
+  ci_lower: number
+  ci_upper: number
+  p_hypo: number
+  p_hyper: number
+  risk_level: 'low' | 'moderate' | 'high' | 'critical'
+}
+
+export interface ModelMeta {
+  last_trained: string | null
+  training_samples: number | null
+  mae_per_horizon: Record<string, number> | null
+}
+
+export interface ForecastResponse {
+  model_trained: boolean
+  forecasts: HorizonForecast[]
+  overall_risk: 'low' | 'moderate' | 'high' | 'critical' | 'unknown'
+  meta: ModelMeta
+}
+
+export function getForecast(): Promise<ForecastResponse> {
+  return apiFetch<ForecastResponse>('/forecast')
+}
+
 export function postInsulin(data: InsulinDoseCreate): Promise<unknown> {
   return apiFetch('/insulin', { method: 'POST', body: JSON.stringify(data) })
 }
