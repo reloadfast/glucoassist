@@ -19,3 +19,8 @@ class MealOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class MealListResponse(BaseModel):
+    entries: list[MealOut]
+    count: int

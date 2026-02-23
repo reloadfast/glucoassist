@@ -7,6 +7,7 @@ const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Statistics = lazy(() => import('@/pages/Statistics'))
 const Patterns = lazy(() => import('@/pages/Patterns'))
 const Intelligence = lazy(() => import('@/pages/Intelligence'))
+const Logs = lazy(() => import('@/pages/Logs'))
 const Settings = lazy(() => import('@/pages/Settings'))
 
 function PageLoader() {
@@ -51,6 +52,14 @@ export default function App() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <Intelligence />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/logs"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <Logs />
               </Suspense>
             }
           />

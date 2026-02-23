@@ -1,8 +1,10 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTimezone } from '@/components/TimezoneProvider'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { usePatternHistory } from '@/hooks/usePatternHistory'
 import type { PatternHistoryEntry, PatternItem } from '@/lib/api'
+import { formatTs } from '@/lib/formatters'
 
 function PatternCard({ pattern }: { pattern: PatternItem }) {
   return (
@@ -25,16 +27,13 @@ function PatternCard({ pattern }: { pattern: PatternItem }) {
   )
 }
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleString()
-}
-
 function PatternHistoryRow({ entry }: { entry: PatternHistoryEntry }) {
+  const { tz } = useTimezone()
   return (
     <tr className="border-b last:border-0 text-sm">
       <td className="py-2 pr-4 font-medium">{entry.pattern_name}</td>
-      <td className="py-2 pr-4 text-muted-foreground">{fmtDate(entry.first_detected_at)}</td>
-      <td className="py-2 pr-4 text-muted-foreground">{fmtDate(entry.last_detected_at)}</td>
+      <td className="py-2 pr-4 text-muted-foreground">{formatTs(entry.first_detected_at, tz)}</td>
+      <td className="py-2 pr-4 text-muted-foreground">{formatTs(entry.last_detected_at, tz)}</td>
       <td className="py-2 pr-4 tabular-nums">{entry.detection_count}</td>
       <td className="py-2 tabular-nums">
         {entry.last_confidence != null ? `${Math.round(entry.last_confidence * 100)}%` : '—'}

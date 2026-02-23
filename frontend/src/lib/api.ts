@@ -247,6 +247,106 @@ export function getModelRegistry(): Promise<ModelRegistryResponse> {
   return apiFetch<ModelRegistryResponse>('/forecast/registry')
 }
 
+// ─── Log list + delete ─────────────────────────────────────────────────────
+
+export interface InsulinDoseOut {
+  id: number
+  timestamp: string
+  units: number
+  type: 'rapid' | 'long'
+  notes: string | null
+  created_at: string
+}
+
+export interface InsulinListResponse {
+  entries: InsulinDoseOut[]
+  count: number
+}
+
+export interface MealOut {
+  id: number
+  timestamp: string
+  carbs_g: number
+  label: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface MealListResponse {
+  entries: MealOut[]
+  count: number
+}
+
+export interface HealthMetricOut {
+  id: number
+  timestamp: string
+  heart_rate_bpm: number | null
+  weight_kg: number | null
+  activity_type: string | null
+  activity_minutes: number | null
+  notes: string | null
+  created_at: string
+}
+
+export interface HealthMetricListResponse {
+  entries: HealthMetricOut[]
+  count: number
+}
+
+export function getInsulinLog(params?: {
+  from?: string
+  to?: string
+  limit?: number
+}): Promise<InsulinListResponse> {
+  const qs = new URLSearchParams()
+  if (params?.from) qs.set('from', params.from)
+  if (params?.to) qs.set('to', params.to)
+  if (params?.limit != null) qs.set('limit', String(params.limit))
+  const query = qs.toString()
+  return apiFetch<InsulinListResponse>(`/insulin${query ? `?${query}` : ''}`)
+}
+
+export function getMealLog(params?: {
+  from?: string
+  to?: string
+  limit?: number
+}): Promise<MealListResponse> {
+  const qs = new URLSearchParams()
+  if (params?.from) qs.set('from', params.from)
+  if (params?.to) qs.set('to', params.to)
+  if (params?.limit != null) qs.set('limit', String(params.limit))
+  const query = qs.toString()
+  return apiFetch<MealListResponse>(`/meal${query ? `?${query}` : ''}`)
+}
+
+export function getHealthLog(params?: {
+  from?: string
+  to?: string
+  limit?: number
+}): Promise<HealthMetricListResponse> {
+  const qs = new URLSearchParams()
+  if (params?.from) qs.set('from', params.from)
+  if (params?.to) qs.set('to', params.to)
+  if (params?.limit != null) qs.set('limit', String(params.limit))
+  const query = qs.toString()
+  return apiFetch<HealthMetricListResponse>(`/health${query ? `?${query}` : ''}`)
+}
+
+export async function deleteInsulin(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/insulin/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)
+}
+
+export async function deleteMeal(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/meal/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)
+}
+
+export async function deleteHealth(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/health/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)
+}
+
 // ─── Pattern history ───────────────────────────────────────────────────────
 
 export interface PatternHistoryEntry {

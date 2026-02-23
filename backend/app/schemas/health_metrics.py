@@ -23,3 +23,8 @@ class HealthMetricOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class HealthMetricListResponse(BaseModel):
+    entries: list[HealthMetricOut]
+    count: int

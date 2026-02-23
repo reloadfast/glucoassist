@@ -183,13 +183,13 @@ export default function Statistics() {
                   formatter={(v) => (typeof v === 'number' ? `${v.toFixed(1)}%` : String(v ?? ''))}
                 />
                 <Legend />
+                <Bar dataKey="Below Range" stackId="tir" fill="#ef4444" />
                 <Bar dataKey="In Range" stackId="tir" fill="#22c55e">
                   {(stats?.windows ?? []).map((w) => (
                     <Cell key={w.window_days} fill="#22c55e" />
                   ))}
                 </Bar>
                 <Bar dataKey="Above Range" stackId="tir" fill="#f97316" />
-                <Bar dataKey="Below Range" stackId="tir" fill="#ef4444" />
               </BarChart>
             </ResponsiveContainer>
           )}
