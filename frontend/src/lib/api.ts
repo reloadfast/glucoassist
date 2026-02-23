@@ -174,3 +174,93 @@ export function postMeal(data: MealCreate): Promise<unknown> {
 export function postHealth(data: HealthMetricCreate): Promise<unknown> {
   return apiFetch('/health', { method: 'POST', body: JSON.stringify(data) })
 }
+
+// ─── Ratios (ICR / CF) ─────────────────────────────────────────────────────
+
+export interface RatioEstimate {
+  mean: number
+  ci_lower: number
+  ci_upper: number
+  n: number
+}
+
+export interface TimeBlockRatio {
+  block: string
+  icr: RatioEstimate | null
+  cf: RatioEstimate | null
+  icr_samples: number
+  cf_samples: number
+  insufficient_data: boolean
+}
+
+export interface RatiosResponse {
+  blocks: TimeBlockRatio[]
+  days_analyzed: number
+  disclaimer: string
+}
+
+export function getRatios(days = 90): Promise<RatiosResponse> {
+  return apiFetch<RatiosResponse>(`/ratios?days=${days}`)
+}
+
+// ─── Model registry / retrain ──────────────────────────────────────────────
+
+export interface RetrainLogEntry {
+  id: number
+  triggered_at: string
+  trigger_source: string
+  success: boolean
+  training_samples: number | null
+  mae_h30: number | null
+  mae_h60: number | null
+  mae_h120: number | null
+  promoted: boolean
+  notes: string | null
+}
+
+export interface RetrainLogResponse {
+  entries: RetrainLogEntry[]
+}
+
+export interface ModelRegistryVersion {
+  version_id: string
+  training_samples: number
+  mae_per_horizon: Record<string, number>
+  promoted: boolean
+  trained_at: string
+  trigger_source?: string
+}
+
+export interface ModelRegistryResponse {
+  versions: ModelRegistryVersion[]
+}
+
+export function postRetrain(): Promise<{ status: string }> {
+  return apiFetch('/forecast/retrain', { method: 'POST' })
+}
+
+export function getRetrainLog(limit = 20): Promise<RetrainLogResponse> {
+  return apiFetch<RetrainLogResponse>(`/forecast/retrain/log?limit=${limit}`)
+}
+
+export function getModelRegistry(): Promise<ModelRegistryResponse> {
+  return apiFetch<ModelRegistryResponse>('/forecast/registry')
+}
+
+// ─── Pattern history ───────────────────────────────────────────────────────
+
+export interface PatternHistoryEntry {
+  pattern_name: string
+  first_detected_at: string
+  last_detected_at: string
+  detection_count: number
+  last_confidence: number | null
+}
+
+export interface PatternHistoryResponse {
+  history: PatternHistoryEntry[]
+}
+
+export function getPatternHistory(): Promise<PatternHistoryResponse> {
+  return apiFetch<PatternHistoryResponse>('/analytics/patterns/history')
+}

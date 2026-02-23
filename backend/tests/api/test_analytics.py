@@ -71,11 +71,18 @@ async def test_patterns_empty(client):
     assert resp.status_code == 200
     data = resp.json()
     assert "patterns" in data
-    assert len(data["patterns"]) == 4
+    assert len(data["patterns"]) == 7
     for p in data["patterns"]:
         assert p["detected"] is False
         assert isinstance(p["name"], str)
         assert isinstance(p["description"], str)
+
+
+@pytest.mark.asyncio
+async def test_pattern_history_endpoint_empty(client):
+    resp = await client.get("/api/v1/analytics/patterns/history")
+    assert resp.status_code == 200
+    assert resp.json() == {"history": []}
 
 
 @pytest.mark.asyncio

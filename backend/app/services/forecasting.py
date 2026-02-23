@@ -7,12 +7,14 @@ Features (13): last 6 glucose values + 5-min delta + 10-min delta + avg rate
 CI: empirical 80% — predicted ± 1.28 * residual_std from validation residuals.
 Risk: P(hypo < 70) and P(hyper > 250) via normal CDF from math.erfc (stdlib only).
 Storage: joblib files alongside the SQLite DB file.
+Registry: JSON manifest of training runs; A/B promotion guards live models.
 """
 import json
 import logging
 import math
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NamedTuple
 
 import joblib
 import numpy as np
@@ -42,6 +44,17 @@ RISK_THRESHOLDS = [  # (upper_exclusive, level)
 VALIDATION_FRACTION = 0.2
 RANDOM_STATE = 42
 N_FEATURES = 13  # 6 glucose + 3 rate features + 2 hour cyclic + 2 weekday cyclic
+REGISTRY_MAX_ENTRIES = 50
+
+
+# ── Return type for train_models ───────────────────────────────────────────────
+
+class TrainResult(NamedTuple):
+    success: bool
+    promoted: bool
+    training_samples: int
+    maes: dict[str, float]
+    notes: str
 
 
 # ── Path helpers ───────────────────────────────────────────────────────────────
@@ -55,12 +68,62 @@ def _model_path(horizon_min: int) -> Path:
     return _model_dir() / f"model_h{horizon_min}.joblib"
 
 
+def _candidate_model_path(horizon_min: int) -> Path:
+    return _model_dir() / f"model_h{horizon_min}_candidate.joblib"
+
+
 def _meta_path() -> Path:
     return _model_dir() / "model_meta.json"
 
 
+def _registry_path() -> Path:
+    return _model_dir() / "model_registry.json"
+
+
 def models_exist() -> bool:
     return all(_model_path(h).exists() for h in HORIZONS)
+
+
+# ── Registry helpers ───────────────────────────────────────────────────────────
+
+def _load_registry() -> list[dict]:
+    p = _registry_path()
+    if not p.exists():
+        return []
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return []
+
+
+def _append_registry(entry: dict) -> None:
+    entries = _load_registry()
+    entries.append(entry)
+    entries = entries[-REGISTRY_MAX_ENTRIES:]
+    _registry_path().write_text(json.dumps(entries, indent=2))
+
+
+def _current_mae() -> dict[str, float] | None:
+    p = _meta_path()
+    if not p.exists():
+        return None
+    try:
+        data = json.loads(p.read_text())
+        return data.get("mae_per_horizon")
+    except Exception:
+        return None
+
+
+def _should_promote(
+    current_maes: dict[str, float] | None,
+    candidate_maes: dict[str, float],
+) -> bool:
+    """Promote when no current model exists, or candidate mean MAE is strictly better."""
+    if current_maes is None:
+        return True
+    current_mean = sum(current_maes.values()) / len(current_maes)
+    candidate_mean = sum(candidate_maes.values()) / len(candidate_maes)
+    return candidate_mean < current_mean
 
 
 # ── Feature engineering ────────────────────────────────────────────────────────
@@ -121,11 +184,15 @@ class _HorizonModel:
 
 # ── Training ───────────────────────────────────────────────────────────────────
 
-def train_models(db: Session) -> bool:
+def train_models(
+    db: Session, trigger_source: str = "scheduled"
+) -> TrainResult:
     """
-    Fetch all readings, train Ridge models for all three horizons, persist to disk.
-    Returns True on success, False when insufficient data.
-    Thread-safe for reads; joblib.dump writes atomically on most filesystems.
+    Fetch all readings, train Ridge models for all three horizons.
+
+    Candidate models are evaluated against the current live models (A/B comparison).
+    Live models are only replaced when the candidate mean MAE is strictly better.
+    Returns TrainResult with success/promoted flags and per-horizon MAEs.
     """
     rows = (
         db.query(GlucoseReading.timestamp, GlucoseReading.glucose_mg_dl)
@@ -139,7 +206,13 @@ def train_models(db: Session) -> bool:
             len(rows),
             MIN_TRAIN_SAMPLES,
         )
-        return False
+        return TrainResult(
+            success=False,
+            promoted=False,
+            training_samples=len(rows),
+            maes={},
+            notes=f"Insufficient data: {len(rows)} < {MIN_TRAIN_SAMPLES}",
+        )
 
     values = [float(r.glucose_mg_dl) for r in rows]
     timestamps = [r.timestamp for r in rows]
@@ -148,13 +221,23 @@ def train_models(db: Session) -> bool:
     model_dir = _model_dir()
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    maes: dict[str, float] = {}
+    candidate_maes: dict[str, float] = {}
     for horizon_min, n_steps in HORIZONS.items():
         y = _make_targets(values, n_steps)
         n = min(len(X_all), len(y))
         if n < 50:  # noqa: PLR2004
-            logger.warning("Forecasting: too few aligned samples for h%d — skipping", horizon_min)
-            return False
+            logger.warning(
+                "Forecasting: too few aligned samples for h%d — skipping",
+                horizon_min,
+            )
+            _cleanup_candidates()
+            return TrainResult(
+                success=False,
+                promoted=False,
+                training_samples=len(rows),
+                maes={},
+                notes=f"Too few aligned samples for h{horizon_min}",
+            )
 
         X, y = X_all[:n], y[:n]
         X_tr, X_val, y_tr, y_val = train_test_split(
@@ -174,21 +257,70 @@ def train_models(db: Session) -> bool:
         mae = float(np.mean(np.abs(residuals)))
 
         hm = _HorizonModel(ridge, scaler, residual_std)
-        joblib.dump(hm, _model_path(horizon_min))
-        maes[f"h{horizon_min}"] = round(mae, 2)
+        joblib.dump(hm, _candidate_model_path(horizon_min))
+        candidate_maes[f"h{horizon_min}"] = round(mae, 2)
         logger.info(
-            "Forecasting: trained h%d model  MAE=%.2f  residual_std=%.2f",
+            "Forecasting: trained candidate h%d  MAE=%.2f  residual_std=%.2f",
             horizon_min, mae, residual_std,
         )
 
-    meta = {
-        "last_trained": datetime.now(UTC).isoformat(),
+    current_maes = _current_mae()
+    promoted = _should_promote(current_maes, candidate_maes)
+    trained_at = datetime.now(UTC).isoformat()
+
+    if promoted:
+        for horizon_min in HORIZONS:
+            _candidate_model_path(horizon_min).replace(_model_path(horizon_min))
+        meta = {
+            "last_trained": trained_at,
+            "training_samples": len(rows),
+            "mae_per_horizon": candidate_maes,
+        }
+        _meta_path().write_text(json.dumps(meta))
+        notes = (
+            "Promoted (first training)"
+            if current_maes is None
+            else (
+                f"Promoted: mean MAE "
+                f"{round(sum(candidate_maes.values())/len(candidate_maes),2)}"
+                f" < current "
+                f"{round(sum(current_maes.values())/len(current_maes),2)}"
+            )
+        )
+        logger.info("Forecasting: candidate promoted — %s", notes)
+    else:
+        _cleanup_candidates()
+        cur_mean = round(sum(current_maes.values()) / len(current_maes), 2) if current_maes else 0
+        cand_mean = round(sum(candidate_maes.values()) / len(candidate_maes), 2)
+        notes = (
+            f"Not promoted: candidate mean MAE {cand_mean}"
+            f" >= current {cur_mean}"
+        )
+        logger.info("Forecasting: candidate not promoted — %s", notes)
+
+    _append_registry({
+        "version_id": trained_at,
         "training_samples": len(rows),
-        "mae_per_horizon": maes,
-    }
-    _meta_path().write_text(json.dumps(meta))
-    logger.info("Forecasting: all models trained — meta=%s", meta)
-    return True
+        "mae_per_horizon": candidate_maes,
+        "promoted": promoted,
+        "trained_at": trained_at,
+        "trigger_source": trigger_source,
+    })
+
+    return TrainResult(
+        success=True,
+        promoted=promoted,
+        training_samples=len(rows),
+        maes=candidate_maes,
+        notes=notes,
+    )
+
+
+def _cleanup_candidates() -> None:
+    for horizon_min in HORIZONS:
+        p = _candidate_model_path(horizon_min)
+        if p.exists():
+            p.unlink()
 
 
 # ── Risk math (stdlib only) ────────────────────────────────────────────────────
@@ -254,7 +386,9 @@ def get_forecast(db: Session) -> ForecastResponse:
     rows = list(reversed(rows))  # chronological asc
 
     if len(rows) < 6:  # noqa: PLR2004
-        return ForecastResponse(model_trained=True, forecasts=[], overall_risk="unknown", meta=meta)
+        return ForecastResponse(
+            model_trained=True, forecasts=[], overall_risk="unknown", meta=meta
+        )
 
     values = [float(r.glucose_mg_dl) for r in rows]
     timestamps = [r.timestamp for r in rows]
@@ -268,7 +402,9 @@ def get_forecast(db: Session) -> ForecastResponse:
         x_latest = X_all[-1].reshape(1, -1)
     except Exception:
         logger.exception("Forecasting: feature engineering failed during inference")
-        return ForecastResponse(model_trained=True, forecasts=[], overall_risk="unknown", meta=meta)
+        return ForecastResponse(
+            model_trained=True, forecasts=[], overall_risk="unknown", meta=meta
+        )
 
     forecasts: list[HorizonForecast] = []
     for horizon_min in sorted(HORIZONS):

@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # Historical backfill: days of history to import on first startup (0 = disabled)
     backfill_days: int = 90
 
+    # Forecasting: how often to retrain models (hours)
+    retrain_interval_hours: int = 24
+
 
 @lru_cache
 def get_settings() -> Settings:
