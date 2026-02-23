@@ -26,6 +26,7 @@ RUN awk '/Dev \/ Test/{exit} /^[A-Za-z]/{print}' requirements.txt \
 # Backend source
 COPY backend/app/ ./app/
 COPY backend/alembic/ ./alembic/
+COPY backend/alembic.ini ./
 
 # Frontend static files
 COPY --from=frontend-builder /build/dist/ /app/static/
