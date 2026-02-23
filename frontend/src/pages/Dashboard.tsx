@@ -25,8 +25,16 @@ export default function Dashboard() {
     Promise.all([getInsulinLog({ from, limit: 100 }), getMealLog({ from, limit: 100 })])
       .then(([insulinData, mealData]) => {
         const markers: EventMarker[] = [
-          ...insulinData.entries.map((e) => ({ id: e.id, timestamp: e.timestamp, type: 'insulin' as const })),
-          ...mealData.entries.map((e) => ({ id: e.id, timestamp: e.timestamp, type: 'meal' as const })),
+          ...insulinData.entries.map((e) => ({
+            id: e.id,
+            timestamp: e.timestamp,
+            type: 'insulin' as const,
+          })),
+          ...mealData.entries.map((e) => ({
+            id: e.id,
+            timestamp: e.timestamp,
+            type: 'meal' as const,
+          })),
         ]
         setEventMarkers(markers)
       })
@@ -149,7 +157,11 @@ export default function Dashboard() {
           <CardDescription>Last 24 hours</CardDescription>
         </CardHeader>
         <CardContent>
-          <GlucoseChart readings={readings} forecasts={forecast?.forecasts ?? []} eventMarkers={stableMarkers} />
+          <GlucoseChart
+            readings={readings}
+            forecasts={forecast?.forecasts ?? []}
+            eventMarkers={stableMarkers}
+          />
         </CardContent>
       </Card>
 

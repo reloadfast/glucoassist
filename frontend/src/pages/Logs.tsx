@@ -75,17 +75,27 @@ export default function Logs() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Time</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Units</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Type</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Notes</th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Time
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Units
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Type
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Notes
+                        </th>
                         <th className="py-2 text-left text-muted-foreground font-medium"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {insulin.entries.map((e) => (
                         <tr key={e.id} className="border-b last:border-0">
-                          <td className="py-2 pr-4 text-muted-foreground">{formatTs(e.timestamp, tz)}</td>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {formatTs(e.timestamp, tz)}
+                          </td>
                           <td className="py-2 pr-4 tabular-nums">{e.units}</td>
                           <td className="py-2 pr-4 capitalize">{e.type}</td>
                           <td className="py-2 pr-4 text-muted-foreground">{e.notes ?? '—'}</td>
@@ -127,17 +137,27 @@ export default function Logs() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Time</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Carbs (g)</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Label</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Notes</th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Time
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Carbs (g)
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Label
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Notes
+                        </th>
                         <th className="py-2 text-left text-muted-foreground font-medium"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {meals.entries.map((e) => (
                         <tr key={e.id} className="border-b last:border-0">
-                          <td className="py-2 pr-4 text-muted-foreground">{formatTs(e.timestamp, tz)}</td>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {formatTs(e.timestamp, tz)}
+                          </td>
                           <td className="py-2 pr-4 tabular-nums">{e.carbs_g}</td>
                           <td className="py-2 pr-4">{e.label ?? '—'}</td>
                           <td className="py-2 pr-4 text-muted-foreground">{e.notes ?? '—'}</td>
@@ -179,18 +199,30 @@ export default function Logs() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Time</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">HR</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Weight (kg)</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Activity</th>
-                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">Notes</th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Time
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          HR
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Weight (kg)
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Activity
+                        </th>
+                        <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                          Notes
+                        </th>
                         <th className="py-2 text-left text-muted-foreground font-medium"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {health.entries.map((e) => (
                         <tr key={e.id} className="border-b last:border-0">
-                          <td className="py-2 pr-4 text-muted-foreground">{formatTs(e.timestamp, tz)}</td>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {formatTs(e.timestamp, tz)}
+                          </td>
                           <td className="py-2 pr-4 tabular-nums">{e.heart_rate_bpm ?? '—'}</td>
                           <td className="py-2 pr-4 tabular-nums">{e.weight_kg ?? '—'}</td>
                           <td className="py-2 pr-4">
