@@ -2,7 +2,7 @@
 fastapi==0.131.0
 starlette==0.52.0  # pinned; 0.45.3 had GHSA-2c2j-9gv5-cj73 + GHSA-7f5h-v6xp-fcq8
 uvicorn[standard]==0.41.0
-sqlalchemy==2.0.38
+sqlalchemy==2.0.46
 alembic==1.14.1
 apscheduler==3.11.0
 httpx==0.28.1

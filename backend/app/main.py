@@ -13,7 +13,14 @@ from app.core.logger import setup_logging
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     setup_logging(settings.app_env)
+
+    from app.db.engine import init_db
+    from app.services.scheduler import start_scheduler, stop_scheduler
+
+    init_db()
+    start_scheduler(settings)
     yield
+    stop_scheduler()
 
 
 def create_app() -> FastAPI:
@@ -40,6 +47,9 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(health_router, prefix="/api")
+
+    from app.api import router as api_router
+    application.include_router(api_router)
 
     return application
 

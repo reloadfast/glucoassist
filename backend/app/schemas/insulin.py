@@ -1,0 +1,21 @@
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+
+class InsulinDoseCreate(BaseModel):
+    timestamp: datetime
+    units: float = Field(gt=0, le=100)
+    type: str = Field(pattern="^(rapid|long)$")
+    notes: str | None = None
+
+
+class InsulinDoseOut(BaseModel):
+    id: int
+    timestamp: datetime
+    units: float
+    type: str
+    notes: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
