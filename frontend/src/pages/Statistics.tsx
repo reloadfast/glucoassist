@@ -56,12 +56,16 @@ function tirChartData(windows: WindowStats[]) {
 }
 
 const COLUMN_DESCRIPTIONS: Record<string, string> = {
-  Avg: 'Mean glucose (mg/dL) over the window',
-  SD: 'Standard deviation — spread of glucose values (mg/dL)',
-  'CV%': 'Coefficient of variation — SD÷Avg×100; target <36%',
-  'TIR%': 'Time in range 70–180 mg/dL; target ≥70%',
-  'TBR%': 'Time below range <70 mg/dL; target <4%',
-  'TAR%': 'Time above range >180 mg/dL; target <25%',
+  Avg: 'Average glucose — the mean glucose level over the window. A useful baseline but can mask dangerous highs and lows if variability is high. Target depends on individual goals; a common range is 80–154 mg/dL (eAG equivalent of HbA1c 5–7%).',
+  SD: 'Standard deviation — how widely glucose values are spread around the average. A high SD means frequent swings, which increases both hypo and hyper risk regardless of a good average. Target SD <36% of your mean (see CV%).',
+  'CV%':
+    'Glucose variability — measures how much glucose fluctuates relative to your average. High variability increases hypoglycaemia risk even when the average looks healthy. Calculated as SD ÷ Avg × 100. Target <36%.',
+  'TIR%':
+    'Time in range — the percentage of readings between 70 and 180 mg/dL. The single most actionable metric for daily management; directly linked to reduced risk of complications. Target ≥70% (≥50% for older adults or those with high hypo risk).',
+  'TBR%':
+    'Time below range — the percentage of readings under 70 mg/dL. Even brief hypoglycaemia carries immediate safety risks and impairs awareness over time. Every 1% TBR reduction is clinically meaningful. Target <4% (<1% below 54 mg/dL).',
+  'TAR%':
+    'Time above range — the percentage of readings over 180 mg/dL. Sustained hyperglycaemia drives long-term complications (neuropathy, retinopathy, nephropathy). Target <25% (<5% above 250 mg/dL).',
 }
 
 function ColHeader({ label, align = 'right' }: { label: string; align?: 'left' | 'right' }) {
@@ -82,7 +86,7 @@ function ColHeader({ label, align = 'right' }: { label: string; align?: 'left' |
           </span>
         </TooltipTrigger>
         <TooltipContent side="top">
-          <p className="max-w-xs text-xs">{desc}</p>
+          <p className="max-w-sm text-xs">{desc}</p>
         </TooltipContent>
       </UITooltip>
     </th>
