@@ -1,0 +1,28 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.ruff_cache/
+backend/.mypy_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Dev/local
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.sqlite
+unraid/
+
+# Git / IDE
+.git/
+.claude/
+.gitignore
+*.md

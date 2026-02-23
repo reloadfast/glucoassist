@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend ──────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check app/
+
+      - name: Security scan (bandit — fail on HIGH)
+        # -lll = report HIGH severity only; exits non-zero if any found
+        run: bandit -r app/ -lll
+
+      - name: Dependency audit (pip-audit)
+        run: pip-audit -r requirements.txt
+
+      - name: Test with coverage
+        run: pytest tests/ -v
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/htmlcov/
+          retention-days: 14
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Format check (prettier)
+        run: npm run format:check
+
+      - name: Dependency audit (production deps only)
+        # --omit=dev: only audit production deps shipped in the container
+        # dev deps have unfixable minimatch ReDoS via eslint-plugin-react transitive chain
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 14
