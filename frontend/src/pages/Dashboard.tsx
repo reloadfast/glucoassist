@@ -1,8 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import GlucoseChart from '@/components/GlucoseChart'
-import ReadingsTable from '@/components/ReadingsTable'
 import LogButtons from '@/components/LogButtons'
+import ReadingsTable from '@/components/ReadingsTable'
 import { useGlucoseData } from '@/hooks/useGlucoseData'
 
 export default function Dashboard() {
@@ -14,84 +13,79 @@ export default function Dashboard() {
   const tirDisplay = summary?.time_in_range_pct != null ? `${summary.time_in_range_pct}%` : '— %'
 
   return (
-    <main className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">GlucoSense</h1>
-          <div className="flex items-center gap-3">
-            <LogButtons onSuccess={refresh} />
-            <Badge variant="secondary">Phase 2 — Data Layer</Badge>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <LogButtons onSuccess={refresh} />
+      </div>
+
+      {error && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardDescription>Latest Reading</CardDescription>
-              <CardTitle className="text-4xl">{loading ? '…' : glucoseDisplay}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {latest ? `Source: ${latest.source}` : 'No data yet'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardDescription>Trend</CardDescription>
-              <CardTitle className="text-4xl">{loading ? '…' : trendArrow}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {summary?.reading_count != null
-                  ? `${summary.reading_count} readings (24h)`
-                  : 'Awaiting CGM data'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardDescription>Time in Range (24h)</CardDescription>
-              <CardTitle className="text-4xl">{loading ? '…' : tirDisplay}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {summary?.avg_glucose != null
-                  ? `Avg ${summary.avg_glucose} mg/dL · Min ${summary.min_glucose} · Max ${summary.max_glucose}`
-                  : '70–180 mg/dL target'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Glucose Chart</CardTitle>
-            <CardDescription>Last 24 hours</CardDescription>
+            <CardDescription>Latest Reading</CardDescription>
+            <CardTitle className="text-4xl">{loading ? '…' : glucoseDisplay}</CardTitle>
           </CardHeader>
           <CardContent>
-            <GlucoseChart readings={readings} />
+            <p className="text-sm text-muted-foreground">
+              {latest ? `Source: ${latest.source}` : 'No data yet'}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Readings</CardTitle>
-            <CardDescription>Last 20 entries</CardDescription>
+            <CardDescription>Trend</CardDescription>
+            <CardTitle className="text-4xl">{loading ? '…' : trendArrow}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ReadingsTable readings={readings} />
+            <p className="text-sm text-muted-foreground">
+              {summary?.reading_count != null
+                ? `${summary.reading_count} readings (24h)`
+                : 'Awaiting CGM data'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>Time in Range (24h)</CardDescription>
+            <CardTitle className="text-4xl">{loading ? '…' : tirDisplay}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {summary?.avg_glucose != null
+                ? `Avg ${summary.avg_glucose} mg/dL · Min ${summary.min_glucose} · Max ${summary.max_glucose}`
+                : '70–180 mg/dL target'}
+            </p>
           </CardContent>
         </Card>
       </div>
-    </main>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Glucose Chart</CardTitle>
+          <CardDescription>Last 24 hours</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GlucoseChart readings={readings} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Readings</CardTitle>
+          <CardDescription>Last 20 entries</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReadingsTable readings={readings} />
+        </CardContent>
+      </Card>
+    </div>
   )
 }

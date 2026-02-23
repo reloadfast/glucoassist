@@ -75,6 +75,55 @@ export function getGlucoseReadings(params?: {
   return apiFetch<GlucoseListResponse>(`/glucose${query ? `?${query}` : ''}`)
 }
 
+export interface WindowStats {
+  window_days: number
+  reading_count: number
+  avg_glucose: number | null
+  sd: number | null
+  cv_pct: number | null
+  tir_pct: number | null
+  tbr_pct: number | null
+  tar_pct: number | null
+  eag: number | null
+  hba1c: number | null
+}
+
+export interface StatsResponse {
+  windows: WindowStats[]
+}
+
+export interface HbA1cResponse {
+  eag_30d: number | null
+  eag_60d: number | null
+  eag_90d: number | null
+  hba1c_30d: number | null
+  hba1c_60d: number | null
+  hba1c_90d: number | null
+}
+
+export interface PatternItem {
+  name: string
+  detected: boolean
+  description: string
+  confidence: number | null
+}
+
+export interface PatternsResponse {
+  patterns: PatternItem[]
+}
+
+export function getAnalyticsStats(): Promise<StatsResponse> {
+  return apiFetch<StatsResponse>('/analytics/stats')
+}
+
+export function getAnalyticsHbA1c(): Promise<HbA1cResponse> {
+  return apiFetch<HbA1cResponse>('/analytics/hba1c')
+}
+
+export function getAnalyticsPatterns(): Promise<PatternsResponse> {
+  return apiFetch<PatternsResponse>('/analytics/patterns')
+}
+
 export function postInsulin(data: InsulinDoseCreate): Promise<unknown> {
   return apiFetch('/insulin', { method: 'POST', body: JSON.stringify(data) })
 }
