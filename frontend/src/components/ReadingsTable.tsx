@@ -41,9 +41,7 @@ export default function ReadingsTable({ readings }: Props) {
             <TableCell className="text-sm text-muted-foreground">
               {format(new Date(r.timestamp), 'MMM d, HH:mm')}
             </TableCell>
-            <TableCell className={glucoseClass(r.glucose_mg_dl)}>
-              {r.glucose_mg_dl} mg/dL
-            </TableCell>
+            <TableCell className={glucoseClass(r.glucose_mg_dl)}>{r.glucose_mg_dl} mg/dL</TableCell>
             <TableCell>{r.trend_arrow ?? '—'}</TableCell>
             <TableCell className="text-sm text-muted-foreground capitalize">{r.source}</TableCell>
           </TableRow>

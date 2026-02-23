@@ -39,8 +39,18 @@ export default function GlucoseChart({ readings }: Props) {
         <XAxis dataKey="time" tick={{ fontSize: 11 }} />
         <YAxis domain={[40, 'auto']} tick={{ fontSize: 11 }} unit=" mg/dL" width={80} />
         <Tooltip formatter={(v) => [`${v as number} mg/dL`, 'Glucose']} />
-        <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="4 4" label={{ value: 'Low', fontSize: 10 }} />
-        <ReferenceLine y={180} stroke="#f97316" strokeDasharray="4 4" label={{ value: 'High', fontSize: 10 }} />
+        <ReferenceLine
+          y={70}
+          stroke="#ef4444"
+          strokeDasharray="4 4"
+          label={{ value: 'Low', fontSize: 10 }}
+        />
+        <ReferenceLine
+          y={180}
+          stroke="#f97316"
+          strokeDasharray="4 4"
+          label={{ value: 'High', fontSize: 10 }}
+        />
         <Line
           type="monotone"
           dataKey="glucose"

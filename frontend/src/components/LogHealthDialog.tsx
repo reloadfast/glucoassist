@@ -52,7 +52,9 @@ export default function LogHealthDialog({ onSuccess }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Log Health</Button>
+        <Button variant="outline" size="sm">
+          Log Health
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
@@ -117,11 +119,7 @@ export default function LogHealthDialog({ onSuccess }: Props) {
           </div>
           <div className="space-y-1">
             <Label htmlFor="health-notes">Notes (optional)</Label>
-            <Input
-              id="health-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
+            <Input id="health-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? 'Saving…' : 'Save'}

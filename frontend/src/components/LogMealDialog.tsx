@@ -46,7 +46,9 @@ export default function LogMealDialog({ onSuccess }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Log Meal</Button>
+        <Button variant="outline" size="sm">
+          Log Meal
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>

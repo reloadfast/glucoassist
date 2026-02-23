@@ -52,7 +52,9 @@ export default function LogInsulinDialog({ onSuccess }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Log Insulin</Button>
+        <Button variant="outline" size="sm">
+          Log Insulin
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
