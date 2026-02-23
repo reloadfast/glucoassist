@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import Session
@@ -16,7 +17,7 @@ def _ingest_job(settings: Settings) -> None:
     db: Session = SessionLocal()
     try:
         count = run_ingest(db, settings)
-        logger.debug("Scheduled ingest completed: %d new readings", count)
+        logger.info("Scheduled ingest completed: %d new readings inserted", count)
     except Exception:
         logger.exception("Unhandled error in scheduled ingest job")
     finally:
@@ -33,6 +34,7 @@ def start_scheduler(settings: Settings) -> None:
         args=[settings],
         id="ingest_job",
         replace_existing=True,
+        next_run_time=datetime.now(UTC),  # run immediately on startup
     )
     _scheduler.start()
     logger.info(

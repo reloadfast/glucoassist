@@ -81,11 +81,14 @@ def run_ingest(db: Session, settings: Settings) -> int:
         logger.warning("No CGM URL configured for source=%s — skipping ingest", settings.cgm_source)
         return 0
 
+    logger.info("Ingest: fetching from %s (source=%s)", url, settings.cgm_source)
     try:
         raw_entries = fetch_entries(url, token)
     except httpx.HTTPError as exc:
-        logger.error("HTTP error during ingest: %s", exc)
+        logger.error("Ingest HTTP error from %s: %s", url, exc)
         return 0
+
+    logger.info("Ingest: received %d raw entries", len(raw_entries))
 
     readings = []
     for raw in raw_entries:
@@ -95,6 +98,7 @@ def run_ingest(db: Session, settings: Settings) -> int:
         readings.append(reading)
 
     if not readings:
+        logger.warning("Ingest: 0 sgv entries parsed from %d raw entries", len(raw_entries))
         return 0
 
     # Deduplicate: collect timestamps already in DB
