@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     garmin_username: str = ""
     garmin_password: str = ""
     garmin_ingest_interval_seconds: int = 3600
+    garmin_tokenstore: str = "/data/garmin_tokens"  # directory for cached OAuth tokens
 
 
 @lru_cache

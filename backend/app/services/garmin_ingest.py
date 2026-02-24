@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from datetime import UTC, date, datetime, timedelta
 
@@ -101,11 +102,24 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
         return 0
 
     date_str = target_date.isoformat()
+    tokenstore = settings.garmin_tokenstore
+    _token_files = ("oauth1_token.json", "oauth2_token.json")
+    has_tokens = bool(tokenstore) and all(
+        os.path.exists(os.path.join(tokenstore, f)) for f in _token_files
+    )
 
     for attempt in range(_MAX_RETRIES):
         try:
             client = Garmin(settings.garmin_username, settings.garmin_password)
-            client.login()
+
+            if has_tokens:
+                logger.debug("Garmin: loading cached tokens from %s", tokenstore)
+                client.login(tokenstore=tokenstore)
+            else:
+                client.login()
+                if tokenstore:
+                    client.garth.dump(tokenstore)
+                    logger.info("Garmin: tokens saved to %s", tokenstore)
 
             rhr = _parse_rhr(client.get_stats(date_str) or {})
             weight = _parse_weight(client.get_body_composition(date_str))
@@ -147,7 +161,8 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
         except GarthHTTPError as exc:
             if "401" in str(exc):
                 logger.error(
-                    "Garmin: authentication failed (401) — check GARMIN_USERNAME/GARMIN_PASSWORD"
+                    "Garmin: authentication failed (401) — if MFA is enabled on your account, "
+                    "pre-seed tokens by running: python scripts/garmin_login.py"
                 )
             else:
                 logger.error("Garmin: HTTP error from garth: %s", exc)
