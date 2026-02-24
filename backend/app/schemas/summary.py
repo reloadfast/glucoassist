@@ -10,3 +10,4 @@ class SummaryResponse(BaseModel):
     max_glucose: int | None
     time_in_range_pct: float | None
     reading_count: int
+    iob_units: float | None

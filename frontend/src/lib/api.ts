@@ -22,6 +22,7 @@ export interface SummaryResponse {
   max_glucose: number | null
   time_in_range_pct: number | null
   reading_count: number
+  iob_units: number | null
 }
 
 export interface InsulinDoseCreate {
