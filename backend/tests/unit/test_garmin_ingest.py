@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, date, datetime
 from unittest.mock import MagicMock, patch
 
@@ -104,6 +105,7 @@ def _garmin_settings(**overrides) -> Settings:
         "garmin_username": "user@example.com",
         "garmin_password": "secret",  # noqa: S106
         "garmin_ingest_interval_seconds": 3600,
+        "garmin_tokenstore": "",  # disabled by default in tests
     }
     base.update(overrides)
     return Settings(**base)
@@ -212,3 +214,47 @@ def test_run_garmin_ingest_garth_401_error(db_session) -> None:
 
     assert result == 0
     assert db_session.query(HealthMetric).count() == 0
+
+
+@pytest.mark.unit
+def test_run_garmin_ingest_saves_tokens_on_first_login(db_session, tmp_path) -> None:
+    """On first login (no token files), tokens are dumped to tokenstore."""
+    mock_client = MagicMock()
+    mock_client.get_stats.return_value = {"restingHeartRate": 60}
+    mock_client.get_body_composition.return_value = None
+    mock_client.get_sleep_data.return_value = None
+    mock_client.get_stress_data.return_value = None
+
+    mock_mod = _make_garmin_mock(mock_client)
+    tokenstore = str(tmp_path / "tokens")  # does not exist yet
+
+    with patch.dict("sys.modules", {"garminconnect": mock_mod, "garth.exc": MagicMock()}):
+        result = run_garmin_ingest(db_session, _garmin_settings(garmin_tokenstore=tokenstore))
+
+    assert result == 1
+    # login called without tokenstore (credential flow), then dump called
+    mock_client.login.assert_called_once_with()
+    mock_client.garth.dump.assert_called_once_with(tokenstore)
+
+
+@pytest.mark.unit
+def test_run_garmin_ingest_loads_tokens_when_present(db_session, tmp_path) -> None:
+    """When token files exist, login is called with tokenstore instead of credentials."""
+    mock_client = MagicMock()
+    mock_client.get_stats.return_value = {}
+    mock_client.get_body_composition.return_value = None
+    mock_client.get_sleep_data.return_value = None
+    mock_client.get_stress_data.return_value = None
+
+    mock_mod = _make_garmin_mock(mock_client)
+    tokenstore = str(tmp_path / "tokens")
+    os.makedirs(tokenstore)
+    for fname in ("oauth1_token.json", "oauth2_token.json"):
+        (tmp_path / "tokens" / fname).write_text("{}")
+
+    with patch.dict("sys.modules", {"garminconnect": mock_mod, "garth.exc": MagicMock()}):
+        result = run_garmin_ingest(db_session, _garmin_settings(garmin_tokenstore=tokenstore))
+
+    assert result == 1
+    mock_client.login.assert_called_once_with(tokenstore=tokenstore)
+    mock_client.garth.dump.assert_not_called()
