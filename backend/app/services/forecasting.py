@@ -13,7 +13,7 @@ Registry: JSON manifest of training runs; A/B promotion guards live models.
 import json
 import logging
 import math
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import NamedTuple
 
@@ -26,7 +26,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.glucose import GlucoseReading
+from app.models.insulin import InsulinDose
 from app.schemas.forecast import ForecastResponse, HorizonForecast, ModelMeta
+from app.services.iob import RAPID_DIA_MIN, iob_fraction
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ RISK_THRESHOLDS = [  # (upper_exclusive, level)
 ]
 VALIDATION_FRACTION = 0.2
 RANDOM_STATE = 42
-N_FEATURES = 13  # 6 glucose + 3 rate features + 2 hour cyclic + 2 weekday cyclic
+N_FEATURES = 14  # 6 glucose + 3 rate + 2 hour cyclic + 2 weekday cyclic + 1 IOB
 REGISTRY_MAX_ENTRIES = 50
 
 
@@ -133,7 +135,11 @@ def _should_promote(
 # ── Feature engineering ────────────────────────────────────────────────────────
 
 
-def _make_features(values: list[float], timestamps: list[datetime]) -> np.ndarray:
+def _make_features(
+    values: list[float],
+    timestamps: list[datetime],
+    iob_values: list[float] | None = None,
+) -> np.ndarray:
     """
     Build feature matrix from a chronologically sorted glucose series.
     Requires at least 7 rows to produce any output.
@@ -148,6 +154,7 @@ def _make_features(values: list[float], timestamps: list[datetime]) -> np.ndarra
       10   : cos(hour_of_day * 2π/24)
       11   : sin(weekday * 2π/7)
       12   : cos(weekday * 2π/7)
+      13   : IOB (units of active rapid-acting insulin)
     """
     rows = []
     for i in range(6, len(values)):
@@ -155,6 +162,7 @@ def _make_features(values: list[float], timestamps: list[datetime]) -> np.ndarra
         ts = timestamps[i]
         hour_frac = ts.hour + ts.minute / 60.0
         wd = ts.weekday()
+        iob = iob_values[i] if iob_values is not None else 0.0
         rows.append(
             [
                 w[0],
@@ -170,6 +178,7 @@ def _make_features(values: list[float], timestamps: list[datetime]) -> np.ndarra
                 math.cos(2 * math.pi * hour_frac / 24.0),
                 math.sin(2 * math.pi * wd / 7.0),
                 math.cos(2 * math.pi * wd / 7.0),
+                iob,
             ]
         )
     return np.array(rows, dtype=np.float64)
@@ -228,7 +237,28 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
 
     values = [float(r.glucose_mg_dl) for r in rows]
     timestamps = [r.timestamp for r in rows]
-    X_all = _make_features(values, timestamps)
+
+    # Precompute IOB at each glucose timestamp from rapid-acting insulin logs.
+    # Load all rapid doses once to avoid N individual queries.
+    rapid_doses = (
+        db.query(InsulinDose.timestamp, InsulinDose.units)
+        .filter(InsulinDose.type == "rapid")
+        .order_by(InsulinDose.timestamp.asc())
+        .all()
+    )
+    iob_values: list[float] = []
+    for ts in timestamps:
+        cutoff = ts - timedelta(minutes=RAPID_DIA_MIN)
+        total = 0.0
+        for d in rapid_doses:
+            d_ts = d.timestamp
+            if d_ts.tzinfo is None:
+                d_ts = d_ts.replace(tzinfo=UTC)
+            if cutoff <= d_ts <= ts:
+                total += d.units * iob_fraction((ts - d_ts).total_seconds() / 60.0)
+        iob_values.append(total)
+
+    X_all = _make_features(values, timestamps, iob_values)
 
     model_dir = _model_dir()
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -407,7 +437,12 @@ def get_forecast(db: Session) -> ForecastResponse:
     timestamps = [r.timestamp for r in rows]
 
     try:
-        X_all = _make_features(values, timestamps)
+        from app.services.iob import compute_iob
+
+        iob_now = compute_iob(db)
+        # Use current IOB for all inference rows; only X_all[-1] matters for prediction.
+        iob_values = [iob_now] * len(values)
+        X_all = _make_features(values, timestamps, iob_values)
         if len(X_all) == 0:
             return ForecastResponse(
                 model_trained=True, forecasts=[], overall_risk="unknown", meta=meta

@@ -117,6 +117,11 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">
               {latest ? `Source: ${latest.source}` : 'No data yet'}
             </p>
+            {summary?.iob_units != null && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {summary.iob_units}u active insulin
+              </p>
+            )}
           </CardContent>
         </Card>
 
