@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.glucose import GlucoseReadingOut
+
 
 class MealCreate(BaseModel):
     timestamp: datetime
@@ -24,3 +26,11 @@ class MealOut(BaseModel):
 class MealListResponse(BaseModel):
     entries: list[MealOut]
     count: int
+
+
+class MealResponseData(BaseModel):
+    """Post-meal glucose response window (meal timestamp to +150 min)."""
+
+    meal: MealOut
+    actual_readings: list[GlucoseReadingOut]
+    glucose_at_meal: int | None  # closest reading at/after meal time

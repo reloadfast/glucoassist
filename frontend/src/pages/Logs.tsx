@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
-import { Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,8 +9,8 @@ import { useTimezone } from '@/components/TimezoneProvider'
 import { useHealthLog } from '@/hooks/useHealthLog'
 import { useInsulinLog } from '@/hooks/useInsulinLog'
 import { useMealLog } from '@/hooks/useMealLog'
-import { deleteHealth, deleteInsulin, deleteMeal } from '@/lib/api'
-import type { HealthMetricOut, InsulinDoseOut, MealOut } from '@/lib/api'
+import { deleteHealth, deleteInsulin, deleteMeal, getMealResponse } from '@/lib/api'
+import type { GlucoseReading, HealthMetricOut, InsulinDoseOut, MealOut, MealResponseData } from '@/lib/api'
 import { formatTs } from '@/lib/formatters'
 
 type LogEvent =
@@ -56,6 +57,43 @@ function eventDetails(ev: LogEvent): string {
   return parts.join(' · ') || '—'
 }
 
+function MealResponseChart({ readings, mealTs }: { readings: GlucoseReading[]; mealTs: string }) {
+  if (readings.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground py-2">
+        No glucose readings found in the 150-minute window after this meal.
+      </p>
+    )
+  }
+  const mealTime = new Date(mealTs).getTime()
+  const data = readings.map((r) => ({
+    min: Math.round((new Date(r.timestamp).getTime() - mealTime) / 60000),
+    glucose: r.glucose_mg_dl,
+  }))
+  return (
+    <ResponsiveContainer width="100%" height={120}>
+      <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
+        <XAxis
+          dataKey="min"
+          tick={{ fontSize: 10 }}
+          tickFormatter={(v: number) => `+${v}m`}
+          type="number"
+          domain={[0, 150]}
+          ticks={[0, 30, 60, 90, 120, 150]}
+        />
+        <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} width={36} />
+        <Tooltip
+          formatter={(v) => [`${v} mg/dL`, 'Glucose']}
+          labelFormatter={(v) => `+${String(v)} min`}
+        />
+        <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="3 3" />
+        <ReferenceLine y={180} stroke="#f97316" strokeDasharray="3 3" />
+        <Line type="monotone" dataKey="glucose" dot={false} stroke="#22c55e" strokeWidth={2} />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
 function LoadingSkeleton() {
   return (
     <div className="space-y-2">
@@ -71,6 +109,8 @@ export default function Logs() {
   const insulin = useInsulinLog()
   const meals = useMealLog()
   const health = useHealthLog()
+  const [expandedMeal, setExpandedMeal] = useState<number | null>(null)
+  const [mealResponses, setMealResponses] = useState<Record<number, MealResponseData>>({})
 
   const events = useMemo<LogEvent[]>(() => {
     const all: LogEvent[] = [
@@ -114,6 +154,22 @@ export default function Logs() {
     if (health.hasMore) void health.loadMore()
   }
 
+  async function toggleMealExpand(mealId: number) {
+    if (expandedMeal === mealId) {
+      setExpandedMeal(null)
+      return
+    }
+    setExpandedMeal(mealId)
+    if (!mealResponses[mealId]) {
+      try {
+        const data = await getMealResponse(mealId)
+        setMealResponses((prev) => ({ ...prev, [mealId]: data }))
+      } catch {
+        // non-critical: leave expandedMeal set, chart will show empty state
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
@@ -150,31 +206,70 @@ export default function Logs() {
                     </tr>
                   </thead>
                   <tbody>
-                    {events.map((ev) => (
-                      <tr
-                        key={`${ev.kind}-${ev.entry.id}`}
-                        className="border-b last:border-0 align-middle"
-                      >
-                        <td className="py-2 pr-4 text-muted-foreground whitespace-nowrap">
-                          {formatTs(ev.entry.timestamp, tz)}
-                        </td>
-                        <td className="py-2 pr-4">
-                          <TypeBadge kind={ev.kind} />
-                        </td>
-                        <td className="py-2 pr-4">{eventDetails(ev)}</td>
-                        <td className="py-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            aria-label={`Delete ${ev.kind} entry`}
-                            onClick={() => void handleDelete(ev)}
+                    {events.map((ev) => {
+                      const isMeal = ev.kind === 'meal'
+                      const isExpanded = isMeal && expandedMeal === ev.entry.id
+                      const responseData = isMeal ? mealResponses[ev.entry.id] : undefined
+                      return (
+                        <>
+                          <tr
+                            key={`${ev.kind}-${ev.entry.id}`}
+                            className={`border-b align-middle ${isExpanded ? '' : 'last:border-0'}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                            <td className="py-2 pr-4 text-muted-foreground whitespace-nowrap">
+                              {formatTs(ev.entry.timestamp, tz)}
+                            </td>
+                            <td className="py-2 pr-4">
+                              <TypeBadge kind={ev.kind} />
+                            </td>
+                            <td className="py-2 pr-4">{eventDetails(ev)}</td>
+                            <td className="py-2">
+                              <div className="flex items-center gap-1">
+                                {isMeal && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    aria-label={isExpanded ? 'Collapse glucose response' : 'Show glucose response'}
+                                    aria-expanded={isExpanded}
+                                    onClick={() => void toggleMealExpand(ev.entry.id)}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <ChevronRight className="h-3.5 w-3.5" />
+                                    )}
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  aria-label={`Delete ${ev.kind} entry`}
+                                  onClick={() => void handleDelete(ev)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr key={`${ev.kind}-${ev.entry.id}-response`} className="border-b last:border-0">
+                              <td colSpan={4} className="py-3 px-2">
+                                {responseData ? (
+                                  <MealResponseChart
+                                    readings={responseData.actual_readings}
+                                    mealTs={ev.entry.timestamp}
+                                  />
+                                ) : (
+                                  <Skeleton className="h-[120px] w-full" />
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
