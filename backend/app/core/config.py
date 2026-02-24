@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     garmin_ingest_interval_seconds: int = 3600
     garmin_tokenstore: str = "/data/garmin_tokens"  # directory for cached OAuth tokens
 
+    # Direct LibreLink integration (cgm_source = "librelink_direct")
+    librelink_email: str = ""
+    librelink_password: str = ""
+    librelink_region: str = "EU"
+    librelink_tokenstore: str = "/data/librelink_tokens.json"  # cached auth token (JSON file)
+
 
 @lru_cache
 def get_settings() -> Settings:

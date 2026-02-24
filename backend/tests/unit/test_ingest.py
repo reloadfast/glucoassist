@@ -77,6 +77,44 @@ def test_parse_entry_missing_date():
 
 
 @pytest.mark.unit
+def test_push_entries_inserts(db_session):
+    from app.services.ingest import push_entries
+
+    entries = [SGV_FLAT, NON_SGV]
+    count = push_entries(db_session, entries)
+    assert count == 1  # NON_SGV filtered out
+
+
+@pytest.mark.unit
+def test_push_entries_deduplicates(db_session):
+    from app.services.ingest import push_entries
+
+    count1 = push_entries(db_session, [SGV_FLAT])
+    count2 = push_entries(db_session, [SGV_FLAT])
+    assert count1 == 1
+    assert count2 == 0
+
+
+@pytest.mark.unit
+def test_run_ingest_librelink_push_noop(db_session):
+    from app.core.config import Settings
+
+    settings = Settings(cgm_source="librelink_push")
+    count = run_ingest(db_session, settings)
+    assert count == 0
+
+
+@pytest.mark.unit
+def test_run_backfill_librelink_push_noop(db_session):
+    from app.core.config import Settings
+    from app.services.ingest import run_backfill
+
+    settings = Settings(cgm_source="librelink_push")
+    count = run_backfill(db_session, settings, days=7)
+    assert count == 0
+
+
+@pytest.mark.unit
 def test_run_ingest_no_url(db_session):
     from app.core.config import Settings
 
