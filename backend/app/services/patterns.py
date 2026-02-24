@@ -1,7 +1,8 @@
 """
 Pattern detection: dawn phenomenon, basal drift, exercise sensitivity,
 delayed carb absorption, stress resistance, basal misalignment,
-heart-rate/glucose correlation.
+heart-rate/glucose correlation, sleep-glucose correlation,
+stress-hyperglycaemia correlation.
 """
 
 import statistics
@@ -581,6 +582,166 @@ def _detect_hr_glucose_correlation(db: Session) -> PatternItem:
     )
 
 
+def _detect_sleep_glucose_correlation(db: Session) -> PatternItem:
+    """
+    Sleep-glucose correlation: poor sleep correlates with elevated fasting glucose.
+    Joins Garmin sleep_hours with next-morning avg glucose (05:00–09:00).
+    Detected when Pearson r ≤ -0.4 with ≥5 paired observations (30-day window).
+    """
+    since = datetime.now(UTC) - timedelta(days=30)
+    sleep_rows = (
+        db.query(HealthMetric.timestamp, HealthMetric.sleep_hours)
+        .filter(
+            HealthMetric.timestamp >= since,
+            HealthMetric.sleep_hours.isnot(None),
+            HealthMetric.source == "garmin",
+        )
+        .all()
+    )
+
+    if not sleep_rows:
+        return PatternItem(
+            name="Sleep-Glucose Correlation",
+            detected=False,
+            description=(
+                "No Garmin sleep data found. "
+                "Requires accumulated sleep_hours from Garmin integration."
+            ),
+            confidence=None,
+        )
+
+    sleep_vals: list[float] = []
+    glucose_vals: list[float] = []
+
+    for row in sleep_rows:
+        # Fasting glucose window: 05:00–09:00 on the morning after the sleep record
+        morning_start = (row.timestamp + timedelta(days=1)).replace(
+            hour=5, minute=0, second=0, microsecond=0
+        )
+        morning_end = morning_start.replace(hour=9)
+
+        morning_readings = (
+            db.query(GlucoseReading.glucose_mg_dl)
+            .filter(
+                GlucoseReading.timestamp >= morning_start,
+                GlucoseReading.timestamp < morning_end,
+            )
+            .all()
+        )
+
+        if not morning_readings:
+            continue
+
+        sleep_vals.append(float(row.sleep_hours))
+        glucose_vals.append(statistics.mean(r.glucose_mg_dl for r in morning_readings))
+
+    if len(sleep_vals) < 5:
+        return PatternItem(
+            name="Sleep-Glucose Correlation",
+            detected=False,
+            description=(
+                f"Only {len(sleep_vals)} paired sleep+glucose observation(s) — "
+                "need ≥5 to compute correlation."
+            ),
+            confidence=None,
+        )
+
+    r = _pearson(sleep_vals, glucose_vals)
+    detected = r <= -0.4
+    confidence = round(max(-r, 0.0), 2)
+
+    return PatternItem(
+        name="Sleep-Glucose Correlation",
+        detected=detected,
+        description=(
+            f"Pearson r = {round(r, 2)} between sleep duration and next-morning fasting glucose "
+            f"(n={len(sleep_vals)} nights). "
+            f"{'Poor sleep correlates with elevated fasting glucose.' if detected else 'No clear sleep-glucose correlation.'}"
+        ),
+        confidence=confidence,
+    )
+
+
+def _detect_stress_hyperglycaemia_correlation(db: Session) -> PatternItem:
+    """
+    Stress-hyperglycaemia correlation: higher daily stress score correlates with
+    greater time above range (TAR% >180 mg/dL) on the same day.
+    Detected when Pearson r ≥ 0.4 with ≥7 paired observations (60-day window).
+    """
+    since = datetime.now(UTC) - timedelta(days=60)
+    stress_rows = (
+        db.query(HealthMetric.timestamp, HealthMetric.stress_level)
+        .filter(
+            HealthMetric.timestamp >= since,
+            HealthMetric.stress_level.isnot(None),
+            HealthMetric.source == "garmin",
+        )
+        .all()
+    )
+
+    if not stress_rows:
+        return PatternItem(
+            name="Stress-Hyperglycaemia Correlation",
+            detected=False,
+            description=(
+                "No Garmin stress data found. "
+                "Requires accumulated stress_level from Garmin integration."
+            ),
+            confidence=None,
+        )
+
+    stress_vals: list[float] = []
+    tar_vals: list[float] = []
+
+    for row in stress_rows:
+        day_start = row.timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        day_readings = (
+            db.query(GlucoseReading.glucose_mg_dl)
+            .filter(
+                GlucoseReading.timestamp >= day_start,
+                GlucoseReading.timestamp < day_end,
+            )
+            .all()
+        )
+
+        if len(day_readings) < 3:
+            continue
+
+        values = [r.glucose_mg_dl for r in day_readings]
+        tar_pct = sum(1 for v in values if v > 180) / len(values) * 100.0
+
+        stress_vals.append(float(row.stress_level))
+        tar_vals.append(tar_pct)
+
+    if len(stress_vals) < 7:
+        return PatternItem(
+            name="Stress-Hyperglycaemia Correlation",
+            detected=False,
+            description=(
+                f"Only {len(stress_vals)} paired stress+glucose day(s) — "
+                "need ≥7 to compute correlation."
+            ),
+            confidence=None,
+        )
+
+    r = _pearson(stress_vals, tar_vals)
+    detected = r >= 0.4
+    confidence = round(max(r, 0.0), 2)
+
+    return PatternItem(
+        name="Stress-Hyperglycaemia Correlation",
+        detected=detected,
+        description=(
+            f"Pearson r = {round(r, 2)} between daily stress score and time above range "
+            f"(n={len(stress_vals)} days). "
+            f"{'Higher stress correlates with more hyperglycaemia.' if detected else 'No clear stress-hyperglycaemia correlation.'}"
+        ),
+        confidence=confidence,
+    )
+
+
 def detect_patterns(db: Session) -> list[PatternItem]:
     return [
         _detect_dawn_phenomenon(db),
@@ -590,6 +751,8 @@ def detect_patterns(db: Session) -> list[PatternItem]:
         _detect_stress_resistance(db),
         _detect_basal_misalignment(db),
         _detect_hr_glucose_correlation(db),
+        _detect_sleep_glucose_correlation(db),
+        _detect_stress_hyperglycaemia_correlation(db),
     ]
 
 

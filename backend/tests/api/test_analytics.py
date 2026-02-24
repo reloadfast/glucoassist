@@ -72,7 +72,7 @@ async def test_patterns_empty(client):
     assert resp.status_code == 200
     data = resp.json()
     assert "patterns" in data
-    assert len(data["patterns"]) == 7
+    assert len(data["patterns"]) == 9
     for p in data["patterns"]:
         assert p["detected"] is False
         assert isinstance(p["name"], str)

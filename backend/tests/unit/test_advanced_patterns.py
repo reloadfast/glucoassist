@@ -11,6 +11,8 @@ from app.schemas.analytics import PatternItem
 from app.services.patterns import (
     _detect_basal_misalignment,
     _detect_hr_glucose_correlation,
+    _detect_sleep_glucose_correlation,
+    _detect_stress_hyperglycaemia_correlation,
     _detect_stress_resistance,
     _pearson,
     update_pattern_history,
@@ -202,6 +204,204 @@ def test_hr_correlation_detected(db_session):
     result = _detect_hr_glucose_correlation(db_session)
     assert result.detected is True
     assert result.confidence is not None and result.confidence >= 0.4
+
+
+# ── Sleep-Glucose Correlation ─────────────────────────────────────────────────
+
+
+@pytest.mark.unit
+def test_sleep_glucose_no_data(db_session):
+    result = _detect_sleep_glucose_correlation(db_session)
+    assert result.detected is False
+    assert result.confidence is None
+    assert "No Garmin sleep data" in result.description
+
+
+@pytest.mark.unit
+def test_sleep_glucose_insufficient_pairs(db_session):
+    """Sleep rows present but no CGM data in the next-morning window."""
+    now = datetime.now(UTC)
+    for i in range(3):
+        db_session.add(
+            HealthMetric(
+                timestamp=now - timedelta(days=i + 1),
+                sleep_hours=6.0,
+                source="garmin",
+            )
+        )
+    db_session.commit()
+    result = _detect_sleep_glucose_correlation(db_session)
+    assert result.detected is False
+    assert "need ≥5" in result.description
+
+
+@pytest.mark.unit
+def test_sleep_glucose_detected(db_session):
+    """6 nights: short sleep → high fasting glucose (clear negative r)."""
+    now = datetime.now(UTC)
+    # sleep_hours decreasing, fasting glucose increasing → r close to -1
+    sleep_durations = [8.0, 7.5, 7.0, 6.5, 6.0, 5.5]
+    fasting_glucose = [90, 95, 100, 110, 120, 130]
+
+    for i, (sleep_h, glucose) in enumerate(zip(sleep_durations, fasting_glucose, strict=False)):
+        day_offset = i + 2
+        # Sleep record the night before
+        db_session.add(
+            HealthMetric(
+                timestamp=now - timedelta(days=day_offset),
+                sleep_hours=sleep_h,
+                source="garmin",
+            )
+        )
+        # Morning CGM readings (05:00–09:00) the next day
+        morning = (now - timedelta(days=day_offset - 1)).replace(
+            hour=7, minute=0, second=0, microsecond=0
+        )
+        for j in range(3):
+            db_session.add(
+                GlucoseReading(
+                    timestamp=morning + timedelta(minutes=j * 30),
+                    glucose_mg_dl=glucose,
+                    trend_arrow="Flat",
+                    source="nightscout",
+                )
+            )
+    db_session.commit()
+
+    result = _detect_sleep_glucose_correlation(db_session)
+    assert result.detected is True
+    assert result.confidence is not None and result.confidence >= 0.4
+    assert "Poor sleep" in result.description
+
+
+@pytest.mark.unit
+def test_sleep_glucose_not_detected(db_session):
+    """6 nights with no correlation between sleep and fasting glucose."""
+    now = datetime.now(UTC)
+    for i in range(6):
+        day_offset = i + 2
+        db_session.add(
+            HealthMetric(
+                timestamp=now - timedelta(days=day_offset),
+                sleep_hours=7.0,  # constant sleep
+                source="garmin",
+            )
+        )
+        morning = (now - timedelta(days=day_offset - 1)).replace(
+            hour=7, minute=0, second=0, microsecond=0
+        )
+        for j in range(3):
+            db_session.add(
+                GlucoseReading(
+                    timestamp=morning + timedelta(minutes=j * 30),
+                    glucose_mg_dl=100,  # constant glucose
+                    trend_arrow="Flat",
+                    source="nightscout",
+                )
+            )
+    db_session.commit()
+
+    result = _detect_sleep_glucose_correlation(db_session)
+    assert result.detected is False
+
+
+# ── Stress-Hyperglycaemia Correlation ─────────────────────────────────────────
+
+
+@pytest.mark.unit
+def test_stress_hyperglycaemia_no_data(db_session):
+    result = _detect_stress_hyperglycaemia_correlation(db_session)
+    assert result.detected is False
+    assert result.confidence is None
+    assert "No Garmin stress data" in result.description
+
+
+@pytest.mark.unit
+def test_stress_hyperglycaemia_insufficient_days(db_session):
+    """Stress rows but fewer than 7 days with paired CGM data."""
+    now = datetime.now(UTC)
+    for i in range(4):
+        db_session.add(
+            HealthMetric(
+                timestamp=now - timedelta(days=i + 1),
+                stress_level=50,
+                source="garmin",
+            )
+        )
+    db_session.commit()
+    result = _detect_stress_hyperglycaemia_correlation(db_session)
+    assert result.detected is False
+    assert "need ≥7" in result.description
+
+
+@pytest.mark.unit
+def test_stress_hyperglycaemia_detected(db_session):
+    """8 days: high stress → high TAR% (clear positive r)."""
+    now = datetime.now(UTC)
+    stress_levels = [20, 30, 40, 50, 60, 70, 80, 90]
+    # TAR%: fraction of readings >180, scales with stress
+    hyper_fractions = [0.0, 0.05, 0.1, 0.2, 0.3, 0.45, 0.6, 0.8]
+
+    for i, (stress, hyper_frac) in enumerate(
+        zip(stress_levels, hyper_fractions, strict=False)
+    ):
+        day_offset = i + 2
+        day_ts = now - timedelta(days=day_offset)
+        db_session.add(
+            HealthMetric(
+                timestamp=day_ts.replace(hour=8),
+                stress_level=stress,
+                source="garmin",
+            )
+        )
+        day_start = day_ts.replace(hour=0, minute=0, second=0, microsecond=0)
+        n_readings = 10
+        n_hyper = int(n_readings * hyper_frac)
+        for j in range(n_readings):
+            db_session.add(
+                GlucoseReading(
+                    timestamp=day_start + timedelta(hours=j * 2),
+                    glucose_mg_dl=200 if j < n_hyper else 120,
+                    trend_arrow="Flat",
+                    source="nightscout",
+                )
+            )
+    db_session.commit()
+
+    result = _detect_stress_hyperglycaemia_correlation(db_session)
+    assert result.detected is True
+    assert result.confidence is not None and result.confidence >= 0.4
+    assert "Higher stress" in result.description
+
+
+@pytest.mark.unit
+def test_stress_hyperglycaemia_not_detected(db_session):
+    """8 days with flat stress and flat glucose → r near 0."""
+    now = datetime.now(UTC)
+    for i in range(8):
+        day_offset = i + 2
+        day_ts = now - timedelta(days=day_offset)
+        db_session.add(
+            HealthMetric(
+                timestamp=day_ts.replace(hour=8),
+                stress_level=50,
+                source="garmin",
+            )
+        )
+        day_start = day_ts.replace(hour=0, minute=0, second=0, microsecond=0)
+        for j in range(8):
+            db_session.add(
+                GlucoseReading(
+                    timestamp=day_start + timedelta(hours=j * 3),
+                    glucose_mg_dl=120,
+                    trend_arrow="Flat",
+                    source="nightscout",
+                )
+            )
+    db_session.commit()
+
+    result = _detect_stress_hyperglycaemia_correlation(db_session)
+    assert result.detected is False
 
 
 # ── update_pattern_history ────────────────────────────────────────────────────
