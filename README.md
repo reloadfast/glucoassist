@@ -152,7 +152,13 @@ docker exec -it glucoassist python /app/scripts/garmin_login.py
 ```
 
 If your account has MFA enabled, you will be prompted to enter a code from
-your authenticator app. Tokens are written to `GARMIN_TOKENSTORE`
+your authenticator app.
+
+> **Google / Apple sign-in accounts:** If your Garmin Connect account was
+> created via Google or Apple, you must first set a native Garmin password
+> before this script will work. Go to `connect.garmin.com` → *Sign In* →
+> *Forgot Password?*, enter your email, and follow the reset link to set a
+> password. Then update `GARMIN_PASSWORD` and re-run the script. Tokens are written to `GARMIN_TOKENSTORE`
 (`/data/garmin_tokens` by default), which is on the same persistent volume
 as the database and survives container restarts and upgrades.
 

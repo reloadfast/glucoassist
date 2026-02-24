@@ -96,7 +96,7 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
             GarminConnectConnectionError,
             GarminConnectTooManyRequestsError,
         )
-        from garth.exc import GarthHTTPError  # noqa: PLC0415
+        from garth.exc import GarthException, GarthHTTPError  # noqa: PLC0415
     except ImportError:
         logger.error("Garmin: garminconnect package not installed")
         return 0
@@ -166,6 +166,18 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
                 )
             else:
                 logger.error("Garmin: HTTP error from garth: %s", exc)
+            return 0
+
+        except GarthException as exc:
+            if "Unexpected title" in str(exc):
+                logger.error(
+                    "Garmin: account uses Google/Apple sign-in — native credentials required. "
+                    "Set a Garmin password via 'Forgot Password' at connect.garmin.com, "
+                    "then update GARMIN_PASSWORD and re-run: "
+                    "docker exec -it glucoassist python /app/scripts/garmin_login.py"
+                )
+            else:
+                logger.error("Garmin: SSO error: %s", exc)
             return 0
 
         except GarminConnectConnectionError as exc:
