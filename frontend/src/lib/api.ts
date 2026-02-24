@@ -396,3 +396,28 @@ export interface PatternHistoryResponse {
 export function getPatternHistory(): Promise<PatternHistoryResponse> {
   return apiFetch<PatternHistoryResponse>('/analytics/patterns/history')
 }
+
+// ─── Basal windows ─────────────────────────────────────────────────────────
+
+export interface BasalWindowBlock {
+  block_label: string
+  hour_start: number
+  hour_end: number
+  median: number | null
+  p10: number | null
+  p25: number | null
+  p75: number | null
+  p90: number | null
+  n: number
+  nights: number
+}
+
+export interface BasalWindowResponse {
+  blocks: BasalWindowBlock[]
+  nights_analyzed: number
+  tz: string
+}
+
+export function getBasalWindows(tz = 'UTC'): Promise<BasalWindowResponse> {
+  return apiFetch<BasalWindowResponse>(`/analytics/basal-windows?tz=${encodeURIComponent(tz)}`)
+}
