@@ -10,6 +10,7 @@ import RiskAlertCard from '@/components/RiskAlertCard'
 import { useForecast } from '@/hooks/useForecast'
 import { useGlucoseData } from '@/hooks/useGlucoseData'
 import { getInsulinLog, getMealLog, postBackfill } from '@/lib/api'
+import { formatTrend } from '@/lib/formatters'
 
 const BACKFILL_OPTIONS = [30, 60, 90] as const
 
@@ -47,7 +48,7 @@ export default function Dashboard() {
   const stableMarkers = useMemo(() => eventMarkers, [eventMarkers])
 
   const latest = summary?.latest_reading
-  const trendArrow = latest?.trend_arrow ?? '→'
+  const trendArrow = formatTrend(latest?.trend_arrow)
   const glucoseDisplay = latest ? `${latest.glucose_mg_dl} mg/dL` : '— mg/dL'
   const tirDisplay = summary?.time_in_range_pct != null ? `${summary.time_in_range_pct}%` : '— %'
   const isEmpty = !loading && summary?.reading_count === 0 && !latest
