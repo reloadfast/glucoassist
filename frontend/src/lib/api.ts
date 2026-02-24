@@ -311,11 +311,13 @@ export interface HealthMetricListResponse {
 export function getInsulinLog(params?: {
   from?: string
   to?: string
+  before?: string
   limit?: number
 }): Promise<InsulinListResponse> {
   const qs = new URLSearchParams()
   if (params?.from) qs.set('from', params.from)
   if (params?.to) qs.set('to', params.to)
+  if (params?.before) qs.set('before', params.before)
   if (params?.limit != null) qs.set('limit', String(params.limit))
   const query = qs.toString()
   return apiFetch<InsulinListResponse>(`/insulin${query ? `?${query}` : ''}`)
@@ -324,11 +326,13 @@ export function getInsulinLog(params?: {
 export function getMealLog(params?: {
   from?: string
   to?: string
+  before?: string
   limit?: number
 }): Promise<MealListResponse> {
   const qs = new URLSearchParams()
   if (params?.from) qs.set('from', params.from)
   if (params?.to) qs.set('to', params.to)
+  if (params?.before) qs.set('before', params.before)
   if (params?.limit != null) qs.set('limit', String(params.limit))
   const query = qs.toString()
   return apiFetch<MealListResponse>(`/meal${query ? `?${query}` : ''}`)
@@ -337,11 +341,13 @@ export function getMealLog(params?: {
 export function getHealthLog(params?: {
   from?: string
   to?: string
+  before?: string
   limit?: number
 }): Promise<HealthMetricListResponse> {
   const qs = new URLSearchParams()
   if (params?.from) qs.set('from', params.from)
   if (params?.to) qs.set('to', params.to)
+  if (params?.before) qs.set('before', params.before)
   if (params?.limit != null) qs.set('limit', String(params.limit))
   const query = qs.toString()
   return apiFetch<HealthMetricListResponse>(`/health${query ? `?${query}` : ''}`)

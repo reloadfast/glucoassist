@@ -14,6 +14,7 @@ router = APIRouter(tags=["glucose"])
 def list_glucose(
     from_time: datetime | None = Query(default=None, alias="from"),
     to_time: datetime | None = Query(default=None, alias="to"),
+    before: datetime | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
 ) -> GlucoseListResponse:
@@ -22,6 +23,8 @@ def list_glucose(
         q = q.filter(GlucoseReading.timestamp >= from_time)
     if to_time:
         q = q.filter(GlucoseReading.timestamp <= to_time)
+    if before:
+        q = q.filter(GlucoseReading.timestamp < before)
     readings = q.limit(limit).all()
     return GlucoseListResponse(readings=readings, count=len(readings))
 

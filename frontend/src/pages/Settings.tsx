@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -70,7 +71,11 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-48" />
+            </div>
           ) : (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
               <dt className="text-muted-foreground">Last trained</dt>
@@ -109,7 +114,11 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-48" />
+            </div>
           ) : retrainLog && retrainLog.entries.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

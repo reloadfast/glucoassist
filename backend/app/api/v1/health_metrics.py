@@ -14,6 +14,7 @@ router = APIRouter(tags=["health"])
 def list_health_metrics(
     from_time: datetime | None = Query(default=None, alias="from"),
     to_time: datetime | None = Query(default=None, alias="to"),
+    before: datetime | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
 ) -> HealthMetricListResponse:
@@ -22,6 +23,8 @@ def list_health_metrics(
         q = q.filter(HealthMetric.timestamp >= from_time)
     if to_time:
         q = q.filter(HealthMetric.timestamp <= to_time)
+    if before:
+        q = q.filter(HealthMetric.timestamp < before)
     entries = q.limit(limit).all()
     return HealthMetricListResponse(entries=entries, count=len(entries))
 

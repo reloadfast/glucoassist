@@ -14,6 +14,7 @@ router = APIRouter(tags=["meal"])
 def list_meals(
     from_time: datetime | None = Query(default=None, alias="from"),
     to_time: datetime | None = Query(default=None, alias="to"),
+    before: datetime | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
 ) -> MealListResponse:
@@ -22,6 +23,8 @@ def list_meals(
         q = q.filter(Meal.timestamp >= from_time)
     if to_time:
         q = q.filter(Meal.timestamp <= to_time)
+    if before:
+        q = q.filter(Meal.timestamp < before)
     entries = q.limit(limit).all()
     return MealListResponse(entries=entries, count=len(entries))
 
