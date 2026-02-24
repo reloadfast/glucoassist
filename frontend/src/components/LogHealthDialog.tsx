@@ -11,6 +11,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { postHealth } from '@/lib/api'
 
+function localNow(): string {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
 interface Props {
   onSuccess: () => void
 }
@@ -22,7 +27,7 @@ export default function LogHealthDialog({ onSuccess }: Props) {
   const [activityType, setActivityType] = useState('')
   const [activityMinutes, setActivityMinutes] = useState('')
   const [notes, setNotes] = useState('')
-  const [timestamp, setTimestamp] = useState(() => new Date().toISOString().slice(0, 16))
+  const [timestamp, setTimestamp] = useState(localNow)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,6 +49,7 @@ export default function LogHealthDialog({ onSuccess }: Props) {
       setActivityType('')
       setActivityMinutes('')
       setNotes('')
+      setTimestamp(localNow())
     } finally {
       setSubmitting(false)
     }

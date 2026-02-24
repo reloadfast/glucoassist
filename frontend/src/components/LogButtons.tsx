@@ -1,6 +1,6 @@
 import LogHealthDialog from '@/components/LogHealthDialog'
 import LogInsulinDialog from '@/components/LogInsulinDialog'
-import LogMealDialog from '@/components/LogMealDialog'
+import LogMealInsulinDialog from '@/components/LogMealInsulinDialog'
 
 interface Props {
   onSuccess: () => void
@@ -9,8 +9,8 @@ interface Props {
 export default function LogButtons({ onSuccess }: Props) {
   return (
     <div className="flex gap-2 flex-wrap">
+      <LogMealInsulinDialog onSuccess={onSuccess} />
       <LogInsulinDialog onSuccess={onSuccess} />
-      <LogMealDialog onSuccess={onSuccess} />
       <LogHealthDialog onSuccess={onSuccess} />
     </div>
   )
