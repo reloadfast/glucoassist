@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -134,7 +135,16 @@ export default function Statistics() {
   const { stats, hba1c, loading, error } = useAnalytics()
 
   if (loading) {
-    return <p className="text-muted-foreground">Loading analytics…</p>
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (error) {

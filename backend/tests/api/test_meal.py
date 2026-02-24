@@ -78,3 +78,36 @@ async def test_delete_meal(client: AsyncClient) -> None:
 async def test_delete_meal_not_found(client: AsyncClient) -> None:
     response = await client.delete("/api/v1/meal/999999")
     assert response.status_code == 404
+
+
+@pytest.mark.unit
+async def test_get_meal_before_cursor(client: AsyncClient) -> None:
+    base_ts = "2026-01-01T{:02d}:00:00Z"
+    for hour in range(5):
+        await client.post(
+            "/api/v1/meal",
+            json={"timestamp": base_ts.format(hour), "carbs_g": float(hour + 10)},
+        )
+
+    first = await client.get("/api/v1/meal", params={"limit": 3})
+    assert first.status_code == 200
+    first_entries = first.json()["entries"]
+    assert len(first_entries) == 3
+
+    cursor = first_entries[-1]["timestamp"]
+
+    second = await client.get("/api/v1/meal", params={"limit": 3, "before": cursor})
+    assert second.status_code == 200
+    second_entries = second.json()["entries"]
+    assert len(second_entries) == 2
+
+    first_ids = {e["id"] for e in first_entries}
+    second_ids = {e["id"] for e in second_entries}
+    assert first_ids.isdisjoint(second_ids)
+
+    from datetime import datetime, timezone
+
+    cursor_dt = datetime.fromisoformat(cursor.replace("Z", "+00:00"))
+    for entry in second_entries:
+        entry_dt = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
+        assert entry_dt < cursor_dt

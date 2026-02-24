@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import AppLayout from '@/components/layout/AppLayout'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Statistics = lazy(() => import('@/pages/Statistics'))
@@ -12,8 +13,9 @@ const Settings = lazy(() => import('@/pages/Settings'))
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-      Loading…
+    <div className="p-6 space-y-4">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-64 w-full" />
     </div>
   )
 }

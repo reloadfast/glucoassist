@@ -79,6 +79,7 @@ export default function GlucoseChart({ readings, forecasts = [], eventMarkers = 
   const hasMarkers = eventMarkers.length > 0
 
   return (
+    <div role="img" aria-label="Glucose readings chart">
     <ResponsiveContainer width="100%" height={240}>
       <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -174,5 +175,6 @@ export default function GlucoseChart({ readings, forecasts = [], eventMarkers = 
           ))}
       </ComposedChart>
     </ResponsiveContainer>
+    </div>
   )
 }
