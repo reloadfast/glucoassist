@@ -64,6 +64,12 @@ Build production bundle:
 npm run build
 ```
 
+Analyse bundle size (generates `frontend/dist/stats.html`):
+
+```bash
+npm run analyze
+```
+
 ### Full Docker build
 
 ```bash

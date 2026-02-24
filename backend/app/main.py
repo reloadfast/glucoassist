@@ -84,7 +84,29 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="GlucoAssist",
         version="0.1.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+        description=(
+            "Personal diabetes predictive intelligence system. "
+            "Ingests CGM data from a local nightscout-librelink-up or Nightscout instance "
+            "and provides glucose trend analysis, HbA1c projection, pattern detection, "
+            "and 30/60/120-minute glucose forecasting.\n\n"
+            "> **Not a medical device. Decision-support only — no autonomous dosing.**"
+        ),
         lifespan=lifespan,
+        openapi_tags=[
+            {"name": "glucose", "description": "CGM glucose readings — store and query raw entries"},
+            {"name": "insulin", "description": "Insulin dose log"},
+            {"name": "meal", "description": "Meal and carbohydrate log"},
+            {"name": "health", "description": "Health metrics (heart rate, weight, sleep, stress)"},
+            {"name": "summary", "description": "Current glucose snapshot and rolling statistics"},
+            {"name": "analytics", "description": "HbA1c projection, time-in-range, and detected patterns"},
+            {"name": "forecast", "description": "30/60/120-minute glucose forecast and risk estimate"},
+            {"name": "ratios", "description": "Insulin-to-carb ratio and correction factor estimates"},
+            {"name": "ingest", "description": "Manual ingest trigger and ingest status"},
+            {"name": "garmin", "description": "Garmin Connect integration status and manual sync"},
+        ],
     )
 
     # CORS
