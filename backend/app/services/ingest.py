@@ -94,8 +94,18 @@ def parse_entry(raw: dict) -> GlucoseReading | None:
     )
 
 
+def push_entries(db: Session, raw_entries: list[dict]) -> int:
+    """Parse raw Nightscout-format entries from a push source and bulk insert. Returns count inserted."""
+    readings = [r for raw in raw_entries if (r := parse_entry(raw)) is not None]
+    return _bulk_insert(db, readings)
+
+
 def run_ingest(db: Session, settings: Settings) -> int:
     """Fetch entries, parse, deduplicate by timestamp, and bulk insert. Returns count inserted."""
+    if settings.cgm_source == "librelink_push":
+        logger.debug("Ingest: librelink_push mode — skipping poll (data arrives via POST /api/v1/ingest/entries)")
+        return 0
+
     if settings.cgm_source == "librelink":
         url = settings.librelink_url
         token = None
@@ -172,7 +182,14 @@ def run_backfill(db: Session, settings: Settings, days: int) -> int:
 
     Paginates backwards in time using Nightscout's date-range filter, inserting
     readings in batches of PAGE_SIZE.  Returns the total count of new rows inserted.
+    Not supported for librelink_push or librelink_direct sources.
     """
+    if settings.cgm_source in ("librelink_push", "librelink_direct"):
+        logger.info(
+            "Backfill: not supported for source=%s — skipping", settings.cgm_source
+        )
+        return 0
+
     if settings.cgm_source == "librelink":
         url = settings.librelink_url
         token = None

@@ -17,7 +17,12 @@ _scheduler: BackgroundScheduler | None = None
 def _ingest_job(settings: Settings) -> None:
     db: Session = SessionLocal()
     try:
-        count = run_ingest(db, settings)
+        if settings.cgm_source == "librelink_direct":
+            from app.services.librelink_direct import run_librelink_direct_ingest  # noqa: PLC0415
+
+            count = run_librelink_direct_ingest(db, settings)
+        else:
+            count = run_ingest(db, settings)
         logger.info("Scheduled ingest completed: %d new readings inserted", count)
     except Exception:
         logger.exception("Unhandled error in scheduled ingest job")

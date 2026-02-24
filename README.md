@@ -94,12 +94,48 @@ others have sensible defaults.
 
 ### CGM Source
 
-Set `CGM_SOURCE` to either `librelink` or `nightscout`.
+Set `CGM_SOURCE` to one of four values. Options 1 and 2 eliminate the need for
+a full Nightscout + MongoDB stack.
 
-#### nightscout-librelink-up (recommended)
+#### Option 1 — Direct LibreView API (recommended, single container)
 
-Run a local [nightscout-librelink-up](https://github.com/timoschlueter/nightscout-librelink-up)
-container, then point GlucoAssist at it:
+GlucoAssist connects directly to Abbott's LibreView API. No sidecar containers required.
+
+```env
+CGM_SOURCE=librelink_direct
+LIBRELINK_EMAIL=your-librelink-email@example.com
+LIBRELINK_PASSWORD=your-librelink-password
+LIBRELINK_REGION=EU   # EU, US, DE, AU, CA, AP, FR, JP, AE, EU2
+```
+
+Auth tokens are cached at `LIBRELINK_TOKENSTORE` (`/data/librelink_tokens.json`
+by default) and refreshed automatically when they expire.
+
+**Backfill limitation**: LibreView's API only exposes the current sensor window
+(~8 h of readings). Historical backfill is not available for this source.
+Data accumulates going forward once this source is active.
+
+#### Option 2 — nightscout-librelink-up push receiver (two containers)
+
+Run [nightscout-librelink-up](https://github.com/timoschlueter/nightscout-librelink-up)
+as a sidecar. It polls LibreView and pushes readings directly to GlucoAssist —
+no Nightscout or MongoDB required.
+
+```env
+CGM_SOURCE=librelink_push
+```
+
+Use the provided `docker-compose.yml`:
+
+```bash
+cp .env.example .env   # fill in LINK_UP_USERNAME, LINK_UP_PASSWORD, APP_SECRET_KEY
+docker compose up -d
+```
+
+Set `LINK_UP_ALL_DATA=true` on the first run to import the full sensor history
+from the current sensor window.
+
+#### Option 3 — Poll a nightscout-librelink-up instance
 
 ```env
 CGM_SOURCE=librelink
@@ -109,7 +145,7 @@ LIBRELINK_URL=http://192.168.1.x:7800
 No token required — LibreLink credentials are stored in the
 nightscout-librelink-up container, not here.
 
-#### Nightscout
+#### Option 4 — Nightscout
 
 ```env
 CGM_SOURCE=nightscout
@@ -175,16 +211,31 @@ and are never transmitted anywhere other than the official Garmin Connect API.
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `CGM_SOURCE` | no | `nightscout` | `librelink` or `nightscout` |
+| `CGM_SOURCE` | no | `librelink_direct` | `librelink_direct`, `librelink_push`, `librelink`, or `nightscout` |
+| **Direct LibreView (Option 1)** | | | |
+| `LIBRELINK_EMAIL` | if librelink_direct | — | LibreView account email |
+| `LIBRELINK_PASSWORD` | if librelink_direct | — | LibreView account password |
+| `LIBRELINK_REGION` | no | `EU` | LibreView region: `EU`, `US`, `DE`, `AU`, `CA`, `AP`, `FR`, `JP`, `AE`, `EU2` |
+| `LIBRELINK_TOKENSTORE` | no | `/data/librelink_tokens.json` | Cached auth token file (must be on a persistent volume) |
+| **nightscout-librelink-up sidecar (Option 2)** | | | |
+| `LINK_UP_USERNAME` | if librelink_push | — | LibreView account email (set in sidecar) |
+| `LINK_UP_PASSWORD` | if librelink_push | — | LibreView account password (set in sidecar) |
+| `LINK_UP_REGION` | no | `EU` | LibreView region (set in sidecar) |
+| `LINK_UP_INTERVAL` | no | `5` | Poll interval in minutes (set in sidecar) |
+| `LINK_UP_ALL_DATA` | no | `false` | Import full sensor history on first run (set in sidecar) |
+| **Poll nightscout-librelink-up (Option 3)** | | | |
 | `LIBRELINK_URL` | if librelink | — | Base URL of nightscout-librelink-up |
 | `LIBRELINK_POLL_INTERVAL` | no | `300` | Ingest interval in seconds |
+| **Nightscout (Option 4)** | | | |
 | `NIGHTSCOUT_URL` | if nightscout | — | Nightscout base URL |
 | `NIGHTSCOUT_TOKEN` | no | — | Nightscout `API_SECRET` |
+| **App** | | | |
 | `APP_SECRET_KEY` | **yes** | — | Long random string for session security |
 | `APP_ENV` | no | `production` | `production` or `development` |
 | `DATABASE_PATH` | no | `/data/glucoassist.db` | SQLite file path inside container |
 | `INGEST_INTERVAL_SECONDS` | no | `300` | Ingest scheduler interval |
-| `BACKFILL_DAYS` | no | `90` | Days of CGM history to import on first startup (0 = disabled) |
+| `BACKFILL_DAYS` | no | `90` | Days of CGM history to import on first startup (0 = disabled, not supported for `librelink_direct` or `librelink_push`) |
+| **Garmin** | | | |
 | `GARMIN_ENABLED` | no | `false` | Enable Garmin Connect integration |
 | `GARMIN_USERNAME` | if garmin | — | Garmin Connect account email |
 | `GARMIN_PASSWORD` | if garmin | — | Garmin Connect account password |
