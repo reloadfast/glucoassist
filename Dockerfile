@@ -28,6 +28,9 @@ COPY backend/app/ ./app/
 COPY backend/alembic/ ./alembic/
 COPY backend/alembic.ini ./
 
+# Utility scripts (e.g. garmin_login.py for one-time token seeding)
+COPY scripts/ /app/scripts/
+
 # Frontend static files
 COPY --from=frontend-builder /build/dist/ /app/static/
 
