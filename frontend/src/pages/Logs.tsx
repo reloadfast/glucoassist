@@ -129,11 +129,7 @@ export default function Logs() {
                   </div>
                   {insulin.hasMore && !insulin.loading && (
                     <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void insulin.loadMore()}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => void insulin.loadMore()}>
                         Load more
                       </Button>
                     </div>
@@ -206,11 +202,7 @@ export default function Logs() {
                   </div>
                   {meals.hasMore && !meals.loading && (
                     <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void meals.loadMore()}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => void meals.loadMore()}>
                         Load more
                       </Button>
                     </div>
@@ -301,11 +293,7 @@ export default function Logs() {
                   </div>
                   {health.hasMore && !health.loading && (
                     <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void health.loadMore()}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => void health.loadMore()}>
                         Load more
                       </Button>
                     </div>

@@ -80,101 +80,101 @@ export default function GlucoseChart({ readings, forecasts = [], eventMarkers = 
 
   return (
     <div role="img" aria-label="Glucose readings chart">
-    <ResponsiveContainer width="100%" height={240}>
-      <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-        <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-        <YAxis domain={[40, 'auto']} tick={{ fontSize: 11 }} unit=" mg/dL" width={80} />
-        <Tooltip
-          formatter={(value, name) => {
-            const v = value as number
-            if (name === 'glucose') return [`${v} mg/dL`, 'Glucose']
-            if (name === 'forecast') return [`${v} mg/dL`, 'Forecast']
-            if (name === 'ci_upper') return [`${v} mg/dL`, 'CI Upper']
-            if (name === 'ci_lower') return [`${v} mg/dL`, 'CI Lower']
-            return [String(value), String(name)]
-          }}
-        />
-        <ReferenceLine
-          y={70}
-          stroke="#ef4444"
-          strokeDasharray="4 4"
-          label={{ value: 'Low', fontSize: 10 }}
-        />
-        <ReferenceLine
-          y={180}
-          stroke="#f97316"
-          strokeDasharray="4 4"
-          label={{ value: 'High', fontSize: 10 }}
-        />
-
-        {/* CI shaded band — upper area first, then mask with white from below */}
-        {hasForecast && (
-          <Area
-            type="monotone"
-            dataKey="ci_upper"
-            stroke="none"
-            fill="#3b82f6"
-            fillOpacity={0.15}
-            legendType="none"
-            isAnimationActive={false}
-            connectNulls
+      <ResponsiveContainer width="100%" height={240}>
+        <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis dataKey="time" tick={{ fontSize: 11 }} />
+          <YAxis domain={[40, 'auto']} tick={{ fontSize: 11 }} unit=" mg/dL" width={80} />
+          <Tooltip
+            formatter={(value, name) => {
+              const v = value as number
+              if (name === 'glucose') return [`${v} mg/dL`, 'Glucose']
+              if (name === 'forecast') return [`${v} mg/dL`, 'Forecast']
+              if (name === 'ci_upper') return [`${v} mg/dL`, 'CI Upper']
+              if (name === 'ci_lower') return [`${v} mg/dL`, 'CI Lower']
+              return [String(value), String(name)]
+            }}
           />
-        )}
-        {hasForecast && (
-          <Area
-            type="monotone"
-            dataKey="ci_lower"
-            stroke="none"
-            fill="#ffffff"
-            fillOpacity={1}
-            legendType="none"
-            isAnimationActive={false}
-            connectNulls
+          <ReferenceLine
+            y={70}
+            stroke="#ef4444"
+            strokeDasharray="4 4"
+            label={{ value: 'Low', fontSize: 10 }}
           />
-        )}
+          <ReferenceLine
+            y={180}
+            stroke="#f97316"
+            strokeDasharray="4 4"
+            label={{ value: 'High', fontSize: 10 }}
+          />
 
-        {/* Historical glucose line */}
-        <Line
-          type="monotone"
-          dataKey="glucose"
-          dot={false}
-          strokeWidth={2}
-          className="stroke-primary"
-          isAnimationActive={false}
-        />
+          {/* CI shaded band — upper area first, then mask with white from below */}
+          {hasForecast && (
+            <Area
+              type="monotone"
+              dataKey="ci_upper"
+              stroke="none"
+              fill="#3b82f6"
+              fillOpacity={0.15}
+              legendType="none"
+              isAnimationActive={false}
+              connectNulls
+            />
+          )}
+          {hasForecast && (
+            <Area
+              type="monotone"
+              dataKey="ci_lower"
+              stroke="none"
+              fill="#ffffff"
+              fillOpacity={1}
+              legendType="none"
+              isAnimationActive={false}
+              connectNulls
+            />
+          )}
 
-        {/* Forecast dashed extension */}
-        {hasForecast && (
+          {/* Historical glucose line */}
           <Line
             type="monotone"
-            dataKey="forecast"
-            dot={{ r: 3 }}
+            dataKey="glucose"
+            dot={false}
             strokeWidth={2}
-            stroke="#3b82f6"
-            strokeDasharray="5 5"
-            connectNulls
+            className="stroke-primary"
             isAnimationActive={false}
           />
-        )}
 
-        {/* Event markers */}
-        {hasMarkers &&
-          eventMarkers.map((ev) => (
-            <ReferenceLine
-              key={`${ev.type}-${ev.id}`}
-              x={format(new Date(ev.timestamp), 'HH:mm')}
-              stroke={ev.type === 'insulin' ? '#8b5cf6' : '#f59e0b'}
-              strokeDasharray="3 3"
-              label={{
-                value: ev.type === 'insulin' ? 'I' : 'M',
-                position: 'top',
-                fontSize: 10,
-              }}
+          {/* Forecast dashed extension */}
+          {hasForecast && (
+            <Line
+              type="monotone"
+              dataKey="forecast"
+              dot={{ r: 3 }}
+              strokeWidth={2}
+              stroke="#3b82f6"
+              strokeDasharray="5 5"
+              connectNulls
+              isAnimationActive={false}
             />
-          ))}
-      </ComposedChart>
-    </ResponsiveContainer>
+          )}
+
+          {/* Event markers */}
+          {hasMarkers &&
+            eventMarkers.map((ev) => (
+              <ReferenceLine
+                key={`${ev.type}-${ev.id}`}
+                x={format(new Date(ev.timestamp), 'HH:mm')}
+                stroke={ev.type === 'insulin' ? '#8b5cf6' : '#f59e0b'}
+                strokeDasharray="3 3"
+                label={{
+                  value: ev.type === 'insulin' ? 'I' : 'M',
+                  position: 'top',
+                  fontSize: 10,
+                }}
+              />
+            ))}
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   )
 }

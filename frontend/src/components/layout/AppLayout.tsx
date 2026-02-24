@@ -58,7 +58,10 @@ export default function AppLayout() {
           </div>
         </div>
         {mobileOpen && (
-          <nav aria-label="Main navigation" className="md:hidden border-t px-6 py-2 flex flex-col gap-1">
+          <nav
+            aria-label="Main navigation"
+            className="md:hidden border-t px-6 py-2 flex flex-col gap-1"
+          >
             {navItems.map(({ to, label }) => (
               <NavLink
                 key={to}
