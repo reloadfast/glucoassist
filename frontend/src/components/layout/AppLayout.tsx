@@ -10,6 +10,7 @@ const navItems = [
   { to: '/statistics', label: 'Statistics' },
   { to: '/patterns', label: 'Patterns' },
   { to: '/intelligence', label: 'Intelligence' },
+  { to: '/basal', label: 'Basal' },
   { to: '/logs', label: 'Logs' },
   { to: '/settings', label: 'Settings' },
 ]

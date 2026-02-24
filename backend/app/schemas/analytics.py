@@ -36,3 +36,22 @@ class PatternItem(BaseModel):
 
 class PatternsResponse(BaseModel):
     patterns: list[PatternItem]
+
+
+class BasalWindowBlock(BaseModel):
+    block_label: str
+    hour_start: int
+    hour_end: int
+    median: float | None
+    p10: float | None
+    p25: float | None
+    p75: float | None
+    p90: float | None
+    n: int
+    nights: int
+
+
+class BasalWindowResponse(BaseModel):
+    blocks: list[BasalWindowBlock]
+    nights_analyzed: int
+    tz: str
