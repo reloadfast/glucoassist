@@ -71,10 +71,10 @@ function CustomTooltip({ active, payload, label }: any) {
             Median: <span className="text-foreground font-medium">{fmt(d._median)} mg/dL</span>
           </p>
           <p className="text-muted-foreground">
-            IQR: {fmt(d._p25)}–{fmt(d._p75)} mg/dL
+            IQR (middle 50%): {fmt(d._p25)}–{fmt(d._p75)} mg/dL
           </p>
           <p className="text-muted-foreground">
-            Range: {fmt(d._p10)}–{fmt(d._p90)} mg/dL
+            Range (10th–90th): {fmt(d._p10)}–{fmt(d._p90)} mg/dL
           </p>
           <p className="text-muted-foreground">Nights: {d._nights}</p>
         </>
@@ -129,8 +129,11 @@ export default function Basal() {
         <CardHeader>
           <CardTitle>Overnight Glucose Distribution</CardTitle>
           <CardDescription>
-            Band shows 10th–90th percentile range; dark band is IQR (25th–75th); line is median. At
-            least 3 nights of data required per block.
+            The shaded band shows where your glucose fell across all analyzed nights. The darker
+            centre band is the IQR (interquartile range) — the middle 50% of nights, from the 25th
+            to 75th percentile. The outer, lighter bands extend to the 10th and 90th percentiles.
+            The line marks the median (typical) glucose for each block. At least 3 nights of data
+            are required per block.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -228,7 +231,7 @@ export default function Basal() {
             <CardContent className="px-4 pb-4 text-xs text-muted-foreground space-y-0.5">
               {b.median !== null ? (
                 <>
-                  <p>
+                  <p title="Interquartile range: the middle 50% of nights (25th–75th percentile)">
                     IQR: {fmt(b.p25)}–{fmt(b.p75)}
                   </p>
                   <p>
@@ -242,6 +245,87 @@ export default function Basal() {
           </Card>
         ))}
       </div>
+
+      {/* Explanation card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Understanding Basal Analysis</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-4">
+          <div>
+            <p>
+              Your <strong className="text-foreground">basal insulin</strong> is the background dose
+              that keeps your glucose stable when you are not eating. Overnight is the best window
+              to assess it, because meals, corrections, and activity from the previous evening have
+              usually cleared by 2–3 am. A well-tuned basal holds your glucose flat through the
+              night; an under- or over-dosed basal causes a consistent rise or fall.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="font-medium text-foreground">What the metrics mean</p>
+            <ul className="space-y-1.5 list-none">
+              <li>
+                <span className="font-medium text-foreground">Median</span> — Your typical glucose
+                at that time of night, shown as the number on each block card and as the line on the
+                chart. A flat median across all blocks indicates stable overnight control.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">
+                  IQR (Interquartile Range): 25th–75th percentile
+                </span>{' '}
+                — The darker band on the chart. It spans the middle 50% of your nights, so half of
+                all overnight readings fell inside this band. A narrow IQR means consistent,
+                predictable nights; a wide IQR means high night-to-night variability.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">
+                  Outer range: 10th–90th percentile
+                </span>{' '}
+                — The lighter outer band, trimming the top and bottom 10% of nights as outliers.
+                This shows how wide your overall spread is without being distorted by a single
+                unusual night.
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <p className="font-medium text-foreground">What to look for</p>
+            <ul className="space-y-1.5 list-none">
+              <li>
+                <span className="font-medium text-foreground">Rising median overnight</span> — Basal
+                may be insufficient, or Dawn Phenomenon is active (cortisol-driven rise before
+                waking). Consider discussing a basal increase or time-shift with your diabetes team.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Falling median overnight</span> — Risk
+                of nocturnal hypoglycaemia. Basal may be too high. A consistent downward slope
+                warrants urgent review.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Wide IQR</span> — Inconsistent nights,
+                often caused by varying meal sizes, exercise timing, or illness. Stabilising evening
+                routines may narrow the band before adjusting basal.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Median consistently above 140</span> —
+                Elevated overnight glucose, increasing HbA1c and associated risks. Review basal
+                settings with your diabetes care team.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Median near or below 70</span> —
+                Nocturnal hypoglycaemia risk. This is the most important pattern to act on; discuss
+                a basal reduction with your diabetes team promptly.
+              </li>
+            </ul>
+          </div>
+
+          <p className="text-xs">
+            This analysis is for decision-support only. Always discuss basal adjustments with your
+            diabetes care team before making changes.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
