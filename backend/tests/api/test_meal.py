@@ -1,6 +1,12 @@
 import pytest
 from httpx import AsyncClient
 
+GLUCOSE_PAYLOAD_BASE = {
+    "glucose_mg_dl": 120,
+    "trend_arrow": "→",
+    "source": "test",
+}
+
 MEAL_PAYLOAD = {
     "timestamp": "2026-02-23T12:30:00Z",
     "carbs_g": 45.0,
@@ -78,6 +84,61 @@ async def test_delete_meal(client: AsyncClient) -> None:
 async def test_delete_meal_not_found(client: AsyncClient) -> None:
     response = await client.delete("/api/v1/meal/999999")
     assert response.status_code == 404
+
+
+@pytest.mark.unit
+async def test_get_meal_response_not_found(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/meal/999999/response")
+    assert response.status_code == 404
+
+
+@pytest.mark.unit
+async def test_get_meal_response_no_readings(client: AsyncClient) -> None:
+    """A meal with no glucose data returns empty actual_readings."""
+    create = await client.post("/api/v1/meal", json=MEAL_PAYLOAD)
+    meal_id = create.json()["id"]
+    response = await client.get(f"/api/v1/meal/{meal_id}/response")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["meal"]["id"] == meal_id
+    assert data["actual_readings"] == []
+    assert data["glucose_at_meal"] is None
+
+
+@pytest.mark.unit
+async def test_get_meal_response_with_readings(client: AsyncClient) -> None:
+    """Glucose readings within 150 min window are returned; readings outside are excluded."""
+    meal_ts = "2026-02-23T12:00:00Z"
+    create = await client.post(
+        "/api/v1/meal", json={"timestamp": meal_ts, "carbs_g": 60.0}
+    )
+    meal_id = create.json()["id"]
+
+    # Inside window: +0 min, +30 min, +90 min, +149 min
+    inside_timestamps = [
+        "2026-02-23T12:00:00Z",
+        "2026-02-23T12:30:00Z",
+        "2026-02-23T13:30:00Z",
+        "2026-02-23T14:29:00Z",
+    ]
+    # Outside window: -1 min (before meal), +151 min (after window)
+    outside_timestamps = [
+        "2026-02-23T11:59:00Z",
+        "2026-02-23T14:31:00Z",
+    ]
+    for ts in inside_timestamps + outside_timestamps:
+        await client.post(
+            "/api/v1/glucose", json={**GLUCOSE_PAYLOAD_BASE, "timestamp": ts}
+        )
+
+    response = await client.get(f"/api/v1/meal/{meal_id}/response")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["actual_readings"]) == len(inside_timestamps)
+    assert data["glucose_at_meal"] == 120
+    # Readings returned in ascending timestamp order
+    timestamps = [r["timestamp"] for r in data["actual_readings"]]
+    assert timestamps == sorted(timestamps)
 
 
 @pytest.mark.unit

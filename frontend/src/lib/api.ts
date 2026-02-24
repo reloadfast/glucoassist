@@ -364,6 +364,16 @@ export async function deleteMeal(id: number): Promise<void> {
   if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)
 }
 
+export interface MealResponseData {
+  meal: MealOut
+  actual_readings: GlucoseReading[]
+  glucose_at_meal: number | null
+}
+
+export function getMealResponse(mealId: number): Promise<MealResponseData> {
+  return apiFetch<MealResponseData>(`/meal/${mealId}/response`)
+}
+
 export async function deleteHealth(id: number): Promise<void> {
   const res = await fetch(`${BASE}/health/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)

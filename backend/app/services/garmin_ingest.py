@@ -95,6 +95,7 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
             GarminConnectConnectionError,
             GarminConnectTooManyRequestsError,
         )
+        from garth.exc import GarthHTTPError  # noqa: PLC0415
     except ImportError:
         logger.error("Garmin: garminconnect package not installed")
         return 0
@@ -141,6 +142,15 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
 
         except GarminConnectAuthenticationError:
             logger.error("Garmin: authentication failed — check GARMIN_USERNAME/GARMIN_PASSWORD")
+            return 0
+
+        except GarthHTTPError as exc:
+            if "401" in str(exc):
+                logger.error(
+                    "Garmin: authentication failed (401) — check GARMIN_USERNAME/GARMIN_PASSWORD"
+                )
+            else:
+                logger.error("Garmin: HTTP error from garth: %s", exc)
             return 0
 
         except GarminConnectConnectionError as exc:

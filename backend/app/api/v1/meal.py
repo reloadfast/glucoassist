@@ -1,11 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.glucose import GlucoseReading
 from app.models.meal import Meal
-from app.schemas.meal import MealCreate, MealListResponse, MealOut
+from app.schemas.meal import MealCreate, MealListResponse, MealOut, MealResponseData
 
 router = APIRouter(tags=["meal"])
 
@@ -36,6 +37,29 @@ def create_meal(payload: MealCreate, db: Session = Depends(get_db)) -> Meal:
     db.commit()
     db.refresh(meal)
     return meal
+
+
+RESPONSE_WINDOW_MIN = 150
+
+
+@router.get("/meal/{meal_id}/response", response_model=MealResponseData)
+def get_meal_response(meal_id: int, db: Session = Depends(get_db)) -> MealResponseData:
+    """Return the glucose trace for the 150 minutes following a logged meal."""
+    meal = db.get(Meal, meal_id)
+    if meal is None:
+        raise HTTPException(status_code=404, detail="Meal not found")
+    window_end = meal.timestamp + timedelta(minutes=RESPONSE_WINDOW_MIN)
+    readings = (
+        db.query(GlucoseReading)
+        .filter(
+            GlucoseReading.timestamp >= meal.timestamp,
+            GlucoseReading.timestamp <= window_end,
+        )
+        .order_by(GlucoseReading.timestamp.asc())
+        .all()
+    )
+    glucose_at_meal = readings[0].glucose_mg_dl if readings else None
+    return MealResponseData(meal=meal, actual_readings=readings, glucose_at_meal=glucose_at_meal)
 
 
 @router.delete("/meal/{meal_id}", status_code=204)
