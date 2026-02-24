@@ -44,7 +44,20 @@ def main() -> None:
     try:
         client.login()
     except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: Login failed: {exc}")
+        msg = str(exc)
+        if "Unexpected title" in msg or "GARMIN Authentication Application" in msg:
+            print(
+                "\nERROR: Your Garmin account uses Google or Apple sign-in.\n"
+                "The garminconnect library requires native Garmin credentials.\n\n"
+                "To fix this:\n"
+                "  1. Go to https://connect.garmin.com and click 'Sign In'\n"
+                "  2. Click 'Forgot Password?' and enter your email address\n"
+                "  3. Follow the reset link to set a native Garmin password\n"
+                "  4. Update GARMIN_PASSWORD in your .env / container settings\n"
+                "  5. Re-run this script\n"
+            )
+        else:
+            print(f"\nERROR: Login failed: {exc}\n")
         sys.exit(1)
 
     client.garth.dump(tokenstore)

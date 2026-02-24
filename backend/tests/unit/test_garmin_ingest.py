@@ -191,10 +191,43 @@ def test_run_garmin_ingest_auth_error(db_session) -> None:
 
 
 @pytest.mark.unit
+def test_run_garmin_ingest_garth_unexpected_title(db_session) -> None:
+    """GarthException 'Unexpected title' (Google/Apple SSO account) returns 0 cleanly."""
+
+    class FakeGarthException(Exception):
+        pass
+
+    class FakeGarthHTTPError(Exception):
+        pass
+
+    mock_client = MagicMock()
+    mock_mod = _make_garmin_mock(mock_client)
+    mock_client.login.side_effect = FakeGarthException(
+        "Unexpected title: GARMIN Authentication Application"
+    )
+
+    garth_exc_mod = MagicMock()
+    garth_exc_mod.GarthException = FakeGarthException
+    garth_exc_mod.GarthHTTPError = FakeGarthHTTPError
+
+    with patch.dict(
+        "sys.modules",
+        {"garminconnect": mock_mod, "garth": MagicMock(), "garth.exc": garth_exc_mod},
+    ):
+        result = run_garmin_ingest(db_session, _garmin_settings())
+
+    assert result == 0
+    assert db_session.query(HealthMetric).count() == 0
+
+
+@pytest.mark.unit
 def test_run_garmin_ingest_garth_401_error(db_session) -> None:
     """garth raises GarthHTTPError on 401; must not surface as 'unexpected error'."""
 
-    class FakeGarthHTTPError(Exception):
+    class FakeGarthException(Exception):
+        pass
+
+    class FakeGarthHTTPError(FakeGarthException):
         pass
 
     mock_client = MagicMock()
@@ -204,6 +237,7 @@ def test_run_garmin_ingest_garth_401_error(db_session) -> None:
     )
 
     garth_exc_mod = MagicMock()
+    garth_exc_mod.GarthException = FakeGarthException
     garth_exc_mod.GarthHTTPError = FakeGarthHTTPError
 
     with patch.dict(
