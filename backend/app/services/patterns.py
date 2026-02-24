@@ -656,7 +656,11 @@ def _detect_sleep_glucose_correlation(db: Session) -> PatternItem:
         description=(
             f"Pearson r = {round(r, 2)} between sleep duration and next-morning fasting glucose "
             f"(n={len(sleep_vals)} nights). "
-            f"{'Poor sleep correlates with elevated fasting glucose.' if detected else 'No clear sleep-glucose correlation.'}"
+            + (
+                "Poor sleep correlates with elevated fasting glucose."
+                if detected
+                else "No clear sleep-glucose correlation."
+            )
         ),
         confidence=confidence,
     )
@@ -736,7 +740,11 @@ def _detect_stress_hyperglycaemia_correlation(db: Session) -> PatternItem:
         description=(
             f"Pearson r = {round(r, 2)} between daily stress score and time above range "
             f"(n={len(stress_vals)} days). "
-            f"{'Higher stress correlates with more hyperglycaemia.' if detected else 'No clear stress-hyperglycaemia correlation.'}"
+            + (
+                "Higher stress correlates with more hyperglycaemia."
+                if detected
+                else "No clear stress-hyperglycaemia correlation."
+            )
         ),
         confidence=confidence,
     )
