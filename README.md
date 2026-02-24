@@ -84,12 +84,6 @@ volumes:
 docker compose up -d
 ```
 
-### Unraid Community Applications
-
-Import the template from `unraid/GlucoAssist.xml`, or place the XML in
-`/boot/config/plugins/community.applications/AppsData/` and restart the
-Community Applications plugin.
-
 ---
 
 ## Configuration
@@ -129,7 +123,6 @@ NIGHTSCOUT_TOKEN=your-api-secret
 | Deployment | Where to find `API_SECRET` |
 |---|---|
 | Docker / Compose | `API_SECRET` in your `docker-compose.yml` or `docker inspect nightscout \| grep API_SECRET` |
-| Unraid | Nightscout container → Edit → Variables → `API_SECRET` |
 | Heroku | App Settings → Config Vars → `API_SECRET` |
 | Render / Railway | Environment tab → `API_SECRET` |
 

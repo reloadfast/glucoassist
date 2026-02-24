@@ -107,7 +107,6 @@ docs: add environment variable reference to README
 - [ ] `npm run build` succeeds with no TypeScript errors
 - [ ] Security scans pass (`bandit`, `pip-audit`, `npm audit`)
 - [ ] `.env.example` updated if new env vars added
-- [ ] `unraid/GlucoAssist.xml` updated if ports/volumes/env vars changed
 
 ---
 
@@ -147,4 +146,4 @@ frontend/src/
 
 - Never commit `.env`, secrets, or tokens
 - All secrets via env vars only; document in `.env.example` with placeholder values
-- SQLite file is gitignored; so is `unraid/`
+- SQLite file is gitignored

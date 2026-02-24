@@ -47,4 +47,3 @@ Do NOT remove the `glucoassist-test-data` volume unless explicitly asked.
 - Backend health: OK/FAIL
 - Frontend static: OK/FAIL
 - Any errors from logs
-- Unraid template note: if ports or volumes changed during this session, prompt to run `/unraid-sync`

@@ -27,7 +27,6 @@ Example: `/new-feature 3 docker-single-container`
    - [ ] `/security-scan` passes (no HIGH/CRITICAL)
    - [ ] Conventional commit messages (`feat:`, `fix:`, `chore:`, etc.)
    - [ ] `.env.example` updated if new env vars added
-   - [ ] If ports/volumes changed: `/unraid-sync` done
    - [ ] No `.env`, secrets, or personal data committed
 
 5. **Open PR**
