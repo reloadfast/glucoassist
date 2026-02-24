@@ -1,6 +1,14 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
-import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +18,13 @@ import { useHealthLog } from '@/hooks/useHealthLog'
 import { useInsulinLog } from '@/hooks/useInsulinLog'
 import { useMealLog } from '@/hooks/useMealLog'
 import { deleteHealth, deleteInsulin, deleteMeal, getMealResponse } from '@/lib/api'
-import type { GlucoseReading, HealthMetricOut, InsulinDoseOut, MealOut, MealResponseData } from '@/lib/api'
+import type {
+  GlucoseReading,
+  HealthMetricOut,
+  InsulinDoseOut,
+  MealOut,
+  MealResponseData,
+} from '@/lib/api'
 import { formatTs } from '@/lib/formatters'
 
 type LogEvent =
@@ -230,7 +244,11 @@ export default function Logs() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                    aria-label={isExpanded ? 'Collapse glucose response' : 'Show glucose response'}
+                                    aria-label={
+                                      isExpanded
+                                        ? 'Collapse glucose response'
+                                        : 'Show glucose response'
+                                    }
                                     aria-expanded={isExpanded}
                                     onClick={() => void toggleMealExpand(ev.entry.id)}
                                   >
@@ -254,7 +272,10 @@ export default function Logs() {
                             </td>
                           </tr>
                           {isExpanded && (
-                            <tr key={`${ev.kind}-${ev.entry.id}-response`} className="border-b last:border-0">
+                            <tr
+                              key={`${ev.kind}-${ev.entry.id}-response`}
+                              className="border-b last:border-0"
+                            >
                               <td colSpan={4} className="py-3 px-2">
                                 {responseData ? (
                                   <MealResponseChart
