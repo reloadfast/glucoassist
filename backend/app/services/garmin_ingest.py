@@ -146,7 +146,9 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
 
         except GarthHTTPError as exc:
             if "401" in str(exc):
-                logger.error("Garmin: authentication failed (401) — check GARMIN_USERNAME/GARMIN_PASSWORD")
+                logger.error(
+                    "Garmin: authentication failed (401) — check GARMIN_USERNAME/GARMIN_PASSWORD"
+                )
             else:
                 logger.error("Garmin: HTTP error from garth: %s", exc)
             return 0
