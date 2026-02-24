@@ -12,10 +12,12 @@ from app.schemas.analytics import (
     BasalWindowResponse,
     HbA1cResponse,
     PatternsResponse,
+    RecommendationsResponse,
     StatsResponse,
 )
 from app.services.analytics import compute_window_stats
 from app.services.patterns import detect_patterns, update_pattern_history
+from app.services.recommendations import generate_recommendations
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -52,6 +54,12 @@ def get_patterns(db: Session = Depends(get_db)) -> PatternsResponse:  # noqa: B0
     patterns = detect_patterns(db)
     update_pattern_history(db, patterns)
     return PatternsResponse(patterns=patterns)
+
+
+@router.get("/recommendations", response_model=RecommendationsResponse)
+def get_recommendations(db: Session = Depends(get_db)) -> RecommendationsResponse:  # noqa: B008
+    patterns = detect_patterns(db)
+    return generate_recommendations(patterns)
 
 
 @router.get("/patterns/history")

@@ -108,6 +108,97 @@ async def test_stats_window_days_present(client):
     assert {w["window_days"] for w in windows} == {30, 60, 90}
 
 
+# ─── /analytics/recommendations ──────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_recommendations_empty_no_data(client):
+    """With no data, no patterns are detected → no recommendations returned."""
+    resp = await client.get("/api/v1/analytics/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["recommendations"] == []
+    assert data["patterns_analyzed"] == 9
+    assert data["detected_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_recommendations_response_shape(client):
+    resp = await client.get("/api/v1/analytics/recommendations")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "recommendations" in data
+    assert "patterns_analyzed" in data
+    assert "detected_count" in data
+
+
+@pytest.mark.asyncio
+async def test_recommendations_unit_generate_single():
+    """Unit-test the engine directly — single detected pattern produces one recommendation."""
+    from app.schemas.analytics import PatternItem
+    from app.services.recommendations import generate_recommendations
+
+    patterns = [
+        PatternItem(
+            name="Basal Rate Misalignment",
+            detected=True,
+            description="rising",
+            confidence=0.8,
+        ),
+        PatternItem(name="Dawn Phenomenon", detected=False, description="ok", confidence=None),
+    ]
+    result = generate_recommendations(patterns)
+    assert result.detected_count == 1
+    assert len(result.recommendations) == 1
+    rec = result.recommendations[0]
+    assert rec.priority == "high"
+    assert "Basal Rate Misalignment" in rec.linked_patterns
+
+
+@pytest.mark.asyncio
+async def test_recommendations_unit_combo_rule():
+    """Dawn + Basal Misalignment triggers the combo rule, not two separate ones."""
+    from app.schemas.analytics import PatternItem
+    from app.services.recommendations import generate_recommendations
+
+    patterns = [
+        PatternItem(
+            name="Dawn Phenomenon", detected=True, description="detected", confidence=0.9
+        ),
+        PatternItem(
+            name="Basal Rate Misalignment", detected=True, description="detected", confidence=0.8
+        ),
+    ]
+    result = generate_recommendations(patterns)
+    assert result.detected_count == 2
+    # Combo rule fires → single recommendation consuming both patterns
+    assert len(result.recommendations) == 1
+    rec = result.recommendations[0]
+    assert set(rec.linked_patterns) == {"Dawn Phenomenon", "Basal Rate Misalignment"}
+    assert rec.priority == "high"
+
+
+@pytest.mark.asyncio
+async def test_recommendations_unit_priority_ordering():
+    """Recommendations are ordered high → medium → low."""
+    from app.schemas.analytics import PatternItem
+    from app.services.recommendations import generate_recommendations
+
+    patterns = [
+        PatternItem(
+            name="Exercise Sensitivity", detected=True, description="d", confidence=0.7
+        ),
+        PatternItem(
+            name="Basal Rate Misalignment", detected=True, description="d", confidence=0.9
+        ),
+    ]
+    result = generate_recommendations(patterns)
+    priorities = [r.priority for r in result.recommendations]
+    assert priorities == sorted(
+        priorities, key=lambda p: {"high": 0, "medium": 1, "low": 2}[p]
+    )
+
+
 # ─── /analytics/basal-windows ────────────────────────────────────────────────
 
 

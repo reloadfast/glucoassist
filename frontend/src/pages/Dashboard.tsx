@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GlucoseChart, { type EventMarker } from '@/components/GlucoseChart'
+import InsightsCard from '@/components/InsightsCard'
 import LogButtons from '@/components/LogButtons'
 import ReadingsTable from '@/components/ReadingsTable'
 import RiskAlertCard from '@/components/RiskAlertCard'
@@ -153,6 +154,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <InsightsCard />
 
       {forecast && <RiskAlertCard forecast={forecast} />}
 

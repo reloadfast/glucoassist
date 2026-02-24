@@ -38,6 +38,20 @@ class PatternsResponse(BaseModel):
     patterns: list[PatternItem]
 
 
+class Recommendation(BaseModel):
+    title: str
+    reasoning: str
+    action: str
+    priority: str  # "high" | "medium" | "low"
+    linked_patterns: list[str]
+
+
+class RecommendationsResponse(BaseModel):
+    recommendations: list[Recommendation]
+    patterns_analyzed: int
+    detected_count: int
+
+
 class BasalWindowBlock(BaseModel):
     block_label: str
     hour_start: int
