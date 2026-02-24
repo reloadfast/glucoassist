@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-DB_PATH="${DATABASE_PATH:-/data/glucosense.db}"
+DB_PATH="${DATABASE_PATH:-/data/glucoassist.db}"
 DB_DIR="$(dirname "$DB_PATH")"
 
 echo "[entrypoint] Database path : $DB_PATH"

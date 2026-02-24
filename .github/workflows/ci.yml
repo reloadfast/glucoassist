@@ -116,7 +116,7 @@ jobs:
           context: .
           push: true
           tags: |
-            talesofthemoon/glucosense:latest
-            talesofthemoon/glucosense:${{ github.sha }}
+            talesofthemoon/glucoassist:latest
+            talesofthemoon/glucoassist:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

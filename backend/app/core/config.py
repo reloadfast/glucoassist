@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     app_secret_key: str = "change-me"  # noqa: S105  # placeholder, must be overridden via env var
 
     # Database
-    database_path: str = "/data/glucosense.db"
+    database_path: str = "/data/glucoassist.db"
 
     # CGM source
     cgm_source: str = "librelink"
