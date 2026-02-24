@@ -397,6 +397,26 @@ export function getPatternHistory(): Promise<PatternHistoryResponse> {
   return apiFetch<PatternHistoryResponse>('/analytics/patterns/history')
 }
 
+// ─── Recommendations ───────────────────────────────────────────────────────
+
+export interface Recommendation {
+  title: string
+  reasoning: string
+  action: string
+  priority: 'high' | 'medium' | 'low'
+  linked_patterns: string[]
+}
+
+export interface RecommendationsResponse {
+  recommendations: Recommendation[]
+  patterns_analyzed: number
+  detected_count: number
+}
+
+export function getRecommendations(): Promise<RecommendationsResponse> {
+  return apiFetch<RecommendationsResponse>('/analytics/recommendations')
+}
+
 // ─── Basal windows ─────────────────────────────────────────────────────────
 
 export interface BasalWindowBlock {
