@@ -21,7 +21,7 @@ import logging
 import os
 import ssl
 import time
-from datetime import UTC, datetime
+from datetime import datetime
 
 import httpx
 from sqlalchemy.orm import Session

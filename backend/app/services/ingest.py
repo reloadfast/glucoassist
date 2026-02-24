@@ -95,7 +95,10 @@ def parse_entry(raw: dict) -> GlucoseReading | None:
 
 
 def push_entries(db: Session, raw_entries: list[dict]) -> int:
-    """Parse raw Nightscout-format entries from a push source and bulk insert. Returns count inserted."""
+    """Parse raw Nightscout-format entries from a push source and bulk insert.
+
+    Returns count of new rows inserted.
+    """
     readings = [r for raw in raw_entries if (r := parse_entry(raw)) is not None]
     return _bulk_insert(db, readings)
 
@@ -103,7 +106,7 @@ def push_entries(db: Session, raw_entries: list[dict]) -> int:
 def run_ingest(db: Session, settings: Settings) -> int:
     """Fetch entries, parse, deduplicate by timestamp, and bulk insert. Returns count inserted."""
     if settings.cgm_source == "librelink_push":
-        logger.debug("Ingest: librelink_push mode — skipping poll (data arrives via POST /api/v1/ingest/entries)")
+        logger.debug("Ingest: librelink_push source — skipping poll, data arrives via push")
         return 0
 
     if settings.cgm_source == "librelink":
