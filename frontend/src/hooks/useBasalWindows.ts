@@ -16,8 +16,7 @@ export function useBasalWindows(): BasalWindowsData {
   const [error, setError] = useState<string | null>(null)
   const { tz } = useTimezone()
 
-  const ianaZone =
-    tz === 'local' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC'
+  const ianaZone = tz === 'local' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC'
 
   const fetchData = useCallback(async () => {
     setLoading(true)

@@ -129,8 +129,8 @@ export default function Basal() {
         <CardHeader>
           <CardTitle>Overnight Glucose Distribution</CardTitle>
           <CardDescription>
-            Band shows 10th–90th percentile range; dark band is IQR (25th–75th); line is median.
-            At least 3 nights of data required per block.
+            Band shows 10th–90th percentile range; dark band is IQR (25th–75th); line is median. At
+            least 3 nights of data required per block.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -236,11 +236,7 @@ export default function Basal() {
                   </p>
                 </>
               ) : (
-                <p>
-                  {b.nights < 3
-                    ? `${b.nights}/3 nights`
-                    : 'No data'}
-                </p>
+                <p>{b.nights < 3 ? `${b.nights}/3 nights` : 'No data'}</p>
               )}
             </CardContent>
           </Card>
