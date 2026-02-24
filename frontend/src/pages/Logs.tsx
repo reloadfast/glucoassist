@@ -1,26 +1,59 @@
+import { useMemo } from 'react'
 import { Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { useHealthLog } from '@/hooks/useHealthLog'
 import { useInsulinLog } from '@/hooks/useInsulinLog'
 import { useMealLog } from '@/hooks/useMealLog'
 import { deleteHealth, deleteInsulin, deleteMeal } from '@/lib/api'
+import type { HealthMetricOut, InsulinDoseOut, MealOut } from '@/lib/api'
 import { formatTs } from '@/lib/formatters'
 
-function ErrorMsg({ msg }: { msg: string }) {
+type LogEvent =
+  | { kind: 'insulin'; entry: InsulinDoseOut }
+  | { kind: 'meal'; entry: MealOut }
+  | { kind: 'health'; entry: HealthMetricOut }
+
+function TypeBadge({ kind }: { kind: LogEvent['kind'] }) {
+  const styles = {
+    insulin: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+    meal: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    health: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  }
+  const labels = { insulin: 'Insulin', meal: 'Meal', health: 'Health' }
   return (
-    <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-      {msg}
-    </div>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${styles[kind]}`}
+    >
+      {labels[kind]}
+    </span>
   )
 }
 
-function EmptyMsg({ text }: { text: string }) {
-  return <p className="text-sm text-muted-foreground py-4 text-center">{text}</p>
+function eventDetails(ev: LogEvent): string {
+  if (ev.kind === 'insulin') {
+    const { units, type, notes } = ev.entry
+    return [`${units}u ${type}`, notes].filter(Boolean).join(' · ')
+  }
+  if (ev.kind === 'meal') {
+    const { carbs_g, label, notes } = ev.entry
+    return [`${carbs_g}g carbs`, label, notes].filter(Boolean).join(' · ')
+  }
+  // health
+  const { heart_rate_bpm, weight_kg, sleep_hours, stress_level, activity_type, activity_minutes } =
+    ev.entry
+  const parts: string[] = []
+  if (heart_rate_bpm != null) parts.push(`HR ${heart_rate_bpm} bpm`)
+  if (weight_kg != null) parts.push(`${weight_kg} kg`)
+  if (sleep_hours != null) parts.push(`${sleep_hours}h sleep`)
+  if (stress_level != null) parts.push(`stress ${stress_level}`)
+  if (activity_type) {
+    parts.push(activity_minutes != null ? `${activity_type} ${activity_minutes}min` : activity_type)
+  }
+  return parts.join(' · ') || '—'
 }
 
 function LoadingSkeleton() {
@@ -39,272 +72,124 @@ export default function Logs() {
   const meals = useMealLog()
   const health = useHealthLog()
 
-  async function handleDeleteInsulin(id: number) {
-    if (!window.confirm('Delete this insulin entry?')) return
-    await deleteInsulin(id)
-    insulin.refresh()
+  const events = useMemo<LogEvent[]>(() => {
+    const all: LogEvent[] = [
+      ...insulin.entries.map((e): LogEvent => ({ kind: 'insulin', entry: e })),
+      ...meals.entries.map((e): LogEvent => ({ kind: 'meal', entry: e })),
+      ...health.entries.map((e): LogEvent => ({ kind: 'health', entry: e })),
+    ]
+    return all.sort((a, b) => b.entry.timestamp.localeCompare(a.entry.timestamp))
+  }, [insulin.entries, meals.entries, health.entries])
+
+  const anyLoading =
+    (insulin.loading && insulin.entries.length === 0) ||
+    (meals.loading && meals.entries.length === 0) ||
+    (health.loading && health.entries.length === 0)
+
+  const anyError = insulin.error ?? meals.error ?? health.error
+  const hasMore = insulin.hasMore || meals.hasMore || health.hasMore
+  const loadingMore =
+    (insulin.loading && insulin.entries.length > 0) ||
+    (meals.loading && meals.entries.length > 0) ||
+    (health.loading && health.entries.length > 0)
+
+  async function handleDelete(ev: LogEvent) {
+    const labels = { insulin: 'insulin entry', meal: 'meal entry', health: 'health entry' }
+    if (!window.confirm(`Delete this ${labels[ev.kind]}?`)) return
+    if (ev.kind === 'insulin') {
+      await deleteInsulin(ev.entry.id)
+      insulin.refresh()
+    } else if (ev.kind === 'meal') {
+      await deleteMeal(ev.entry.id)
+      meals.refresh()
+    } else {
+      await deleteHealth(ev.entry.id)
+      health.refresh()
+    }
   }
 
-  async function handleDeleteMeal(id: number) {
-    if (!window.confirm('Delete this meal entry?')) return
-    await deleteMeal(id)
-    meals.refresh()
-  }
-
-  async function handleDeleteHealth(id: number) {
-    if (!window.confirm('Delete this health entry?')) return
-    await deleteHealth(id)
-    health.refresh()
+  function handleLoadMore() {
+    if (insulin.hasMore) void insulin.loadMore()
+    if (meals.hasMore) void meals.loadMore()
+    if (health.hasMore) void health.loadMore()
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
 
-      <Tabs defaultValue="insulin">
-        <TabsList>
-          <TabsTrigger value="insulin">Insulin</TabsTrigger>
-          <TabsTrigger value="meals">Meals</TabsTrigger>
-          <TabsTrigger value="health">Health</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="insulin" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Insulin Log</CardTitle>
-              <CardDescription>Recent insulin doses</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {insulin.loading && insulin.entries.length === 0 ? (
-                <LoadingSkeleton />
-              ) : insulin.error ? (
-                <ErrorMsg msg={insulin.error} />
-              ) : insulin.entries.length === 0 ? (
-                <EmptyMsg text="No insulin entries yet." />
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Time
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Units
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Type
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Notes
-                          </th>
-                          <th className="py-2 text-left text-muted-foreground font-medium"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {insulin.entries.map((e) => (
-                          <tr key={e.id} className="border-b last:border-0">
-                            <td className="py-2 pr-4 text-muted-foreground">
-                              {formatTs(e.timestamp, tz)}
-                            </td>
-                            <td className="py-2 pr-4 tabular-nums">{e.units}</td>
-                            <td className="py-2 pr-4 capitalize">{e.type}</td>
-                            <td className="py-2 pr-4 text-muted-foreground">{e.notes ?? '—'}</td>
-                            <td className="py-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                aria-label="Delete insulin entry"
-                                onClick={() => void handleDeleteInsulin(e.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {insulin.hasMore && !insulin.loading && (
-                    <div className="mt-3">
-                      <Button variant="outline" size="sm" onClick={() => void insulin.loadMore()}>
-                        Load more
-                      </Button>
-                    </div>
-                  )}
-                  {insulin.loading && <LoadingSkeleton />}
-                </>
+      <Card>
+        <CardHeader>
+          <CardTitle>Event Log</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {anyLoading ? (
+            <LoadingSkeleton />
+          ) : anyError ? (
+            <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+              {anyError}
+            </div>
+          ) : events.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No log entries yet.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                        Time
+                      </th>
+                      <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                        Type
+                      </th>
+                      <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
+                        Details
+                      </th>
+                      <th className="py-2 text-left text-muted-foreground font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map((ev) => (
+                      <tr
+                        key={`${ev.kind}-${ev.entry.id}`}
+                        className="border-b last:border-0 align-middle"
+                      >
+                        <td className="py-2 pr-4 text-muted-foreground whitespace-nowrap">
+                          {formatTs(ev.entry.timestamp, tz)}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <TypeBadge kind={ev.kind} />
+                        </td>
+                        <td className="py-2 pr-4">{eventDetails(ev)}</td>
+                        <td className="py-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            aria-label={`Delete ${ev.kind} entry`}
+                            onClick={() => void handleDelete(ev)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {loadingMore && <LoadingSkeleton />}
+              {hasMore && !loadingMore && (
+                <div className="mt-3">
+                  <Button variant="outline" size="sm" onClick={handleLoadMore}>
+                    Load more
+                  </Button>
+                </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="meals" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Meal Log</CardTitle>
-              <CardDescription>Recent meal entries</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {meals.loading && meals.entries.length === 0 ? (
-                <LoadingSkeleton />
-              ) : meals.error ? (
-                <ErrorMsg msg={meals.error} />
-              ) : meals.entries.length === 0 ? (
-                <EmptyMsg text="No meal entries yet." />
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Time
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Carbs (g)
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Label
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Notes
-                          </th>
-                          <th className="py-2 text-left text-muted-foreground font-medium"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {meals.entries.map((e) => (
-                          <tr key={e.id} className="border-b last:border-0">
-                            <td className="py-2 pr-4 text-muted-foreground">
-                              {formatTs(e.timestamp, tz)}
-                            </td>
-                            <td className="py-2 pr-4 tabular-nums">{e.carbs_g}</td>
-                            <td className="py-2 pr-4">{e.label ?? '—'}</td>
-                            <td className="py-2 pr-4 text-muted-foreground">{e.notes ?? '—'}</td>
-                            <td className="py-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                aria-label="Delete meal entry"
-                                onClick={() => void handleDeleteMeal(e.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {meals.hasMore && !meals.loading && (
-                    <div className="mt-3">
-                      <Button variant="outline" size="sm" onClick={() => void meals.loadMore()}>
-                        Load more
-                      </Button>
-                    </div>
-                  )}
-                  {meals.loading && <LoadingSkeleton />}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="health" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Health Log</CardTitle>
-              <CardDescription>Recent health metrics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {health.loading && health.entries.length === 0 ? (
-                <LoadingSkeleton />
-              ) : health.error ? (
-                <ErrorMsg msg={health.error} />
-              ) : health.entries.length === 0 ? (
-                <EmptyMsg text="No health entries yet." />
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Time
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            HR
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Weight (kg)
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Sleep (h)
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Stress
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Activity
-                          </th>
-                          <th className="py-2 pr-4 text-left text-muted-foreground font-medium">
-                            Source
-                          </th>
-                          <th className="py-2 text-left text-muted-foreground font-medium"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {health.entries.map((e) => (
-                          <tr key={e.id} className="border-b last:border-0">
-                            <td className="py-2 pr-4 text-muted-foreground">
-                              {formatTs(e.timestamp, tz)}
-                            </td>
-                            <td className="py-2 pr-4 tabular-nums">{e.heart_rate_bpm ?? '—'}</td>
-                            <td className="py-2 pr-4 tabular-nums">{e.weight_kg ?? '—'}</td>
-                            <td className="py-2 pr-4 tabular-nums">{e.sleep_hours ?? '—'}</td>
-                            <td className="py-2 pr-4 tabular-nums">{e.stress_level ?? '—'}</td>
-                            <td className="py-2 pr-4">
-                              {e.activity_type
-                                ? `${e.activity_type}${e.activity_minutes != null ? ` (${e.activity_minutes}min)` : ''}`
-                                : '—'}
-                            </td>
-                            <td className="py-2 pr-4 text-muted-foreground capitalize">
-                              {e.source ?? '—'}
-                            </td>
-                            <td className="py-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                aria-label="Delete health entry"
-                                onClick={() => void handleDeleteHealth(e.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {health.hasMore && !health.loading && (
-                    <div className="mt-3">
-                      <Button variant="outline" size="sm" onClick={() => void health.loadMore()}>
-                        Load more
-                      </Button>
-                    </div>
-                  )}
-                  {health.loading && <LoadingSkeleton />}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
