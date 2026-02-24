@@ -17,7 +17,7 @@ Report:
 ## Logs check
 
 ```bash
-docker logs glucosense --tail 50 | grep -E "(ingest|error|warn|ERROR|WARN)"
+docker logs glucoassist --tail 50 | grep -E "(ingest|error|warn|ERROR|WARN)"
 ```
 
 Flag any repeated errors or connection failures.

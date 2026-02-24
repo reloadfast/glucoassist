@@ -28,7 +28,7 @@ export default function AppLayout() {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="mx-auto max-w-7xl flex items-center gap-6 px-6 py-3">
-          <span className="text-lg font-bold tracking-tight">GlucoSense</span>
+          <span className="text-lg font-bold tracking-tight">GlucoAssist</span>
           <nav aria-label="Main navigation" className="hidden md:flex gap-4 flex-1">
             {navItems.map(({ to, label }) => (
               <NavLink key={to} to={to} end={to === '/'} className={navLinkClass}>

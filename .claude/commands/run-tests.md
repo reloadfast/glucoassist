@@ -1,4 +1,4 @@
-# Run GlucoSense Test Suite
+# Run GlucoAssist Test Suite
 
 Run all tests and report results. Stop at first suite failure.
 

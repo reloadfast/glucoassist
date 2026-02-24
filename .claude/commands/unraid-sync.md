@@ -1,11 +1,11 @@
 # Unraid Template Sync
 
 Review and update the Unraid Community Applications template.
-File location: `unraid/GlucoSense.xml` (gitignored — local only).
+File location: `unraid/GlucoAssist.xml` (gitignored — local only).
 
 ## Checklist
 
-Work through each item. Edit `unraid/GlucoSense.xml` for any that are out of date.
+Work through each item. Edit `unraid/GlucoAssist.xml` for any that are out of date.
 
 ### 1. Port mappings
 - Read `docker/nginx.conf` for the listening port (default 80 inside container)
@@ -19,11 +19,11 @@ Work through each item. Edit `unraid/GlucoSense.xml` for any that are out of dat
 
 ### 3. Volume mounts
 - Read `docker/entrypoint.sh` and `Dockerfile` for volume paths
-- Confirm `/data` maps to `/mnt/user/appdata/glucosense` in template
+- Confirm `/data` maps to `/mnt/user/appdata/glucoassist` in template
 - Add any new volumes introduced since last sync
 
 ### 4. Metadata
-- Repository tag matches latest Docker image tag (e.g., `reloadfast/glucosense:latest`)
+- Repository tag matches latest Docker image tag (e.g., `reloadfast/glucoassist:latest`)
 - Description is current
 - Category: `Health`
 
@@ -31,8 +31,8 @@ Work through each item. Edit `unraid/GlucoSense.xml` for any that are out of dat
 ```xml
 <?xml version="1.0"?>
 <Container>
-  <Name>GlucoSense</Name>
-  <Repository>reloadfast/glucosense:latest</Repository>
+  <Name>GlucoAssist</Name>
+  <Repository>reloadfast/glucoassist:latest</Repository>
   <Registry/>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
@@ -43,7 +43,7 @@ Work through each item. Edit `unraid/GlucoSense.xml` for any that are out of dat
   <TemplateURL/>
   <Icon/>
   <Config Name="Web UI Port" Target="80" Default="3500" Mode="tcp" Description="Web interface port" Type="Port" Display="always" Required="true" Mask="false">3500</Config>
-  <Config Name="Data Path" Target="/data" Default="/mnt/user/appdata/glucosense" Mode="rw" Description="Persistent data directory" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/glucosense</Config>
+  <Config Name="Data Path" Target="/data" Default="/mnt/user/appdata/glucoassist" Mode="rw" Description="Persistent data directory" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/glucoassist</Config>
   <!-- All vars from .env.example go here as Type="Variable" -->
 </Container>
 ```

@@ -1,4 +1,4 @@
-# Contributing to GlucoSense
+# Contributing to GlucoAssist
 
 ## Local Development Setup
 
@@ -67,8 +67,8 @@ npm run build
 ### Full Docker build
 
 ```bash
-docker build -t glucosense-dev .
-docker run --rm -p 8080:80 --env-file .env glucosense-dev
+docker build -t glucoassist-dev .
+docker run --rm -p 8080:80 --env-file .env glucoassist-dev
 ```
 
 ---
@@ -101,7 +101,7 @@ docs: add environment variable reference to README
 - [ ] `npm run build` succeeds with no TypeScript errors
 - [ ] Security scans pass (`bandit`, `pip-audit`, `npm audit`)
 - [ ] `.env.example` updated if new env vars added
-- [ ] `unraid/GlucoSense.xml` updated if ports/volumes/env vars changed
+- [ ] `unraid/GlucoAssist.xml` updated if ports/volumes/env vars changed
 
 ---
 

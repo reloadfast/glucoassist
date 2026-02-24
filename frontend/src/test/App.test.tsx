@@ -5,7 +5,7 @@ import App from '@/App'
 describe('App', () => {
   it('renders the nav header', () => {
     render(<App />)
-    expect(screen.getByText('GlucoSense')).toBeInTheDocument()
+    expect(screen.getByText('GlucoAssist')).toBeInTheDocument()
   })
 
   it('renders nav links', () => {

@@ -1,4 +1,4 @@
-# GlucoSense
+# GlucoAssist
 
 Personal diabetes predictive intelligence system. A local-first, privacy-respecting analytics platform that learns from CGM data to provide glucose forecasting, pattern detection, and metabolic insight for Type 1 diabetes management.
 
@@ -27,13 +27,13 @@ Personal diabetes predictive intelligence system. A local-first, privacy-respect
 ```bash
 cp .env.example .env
 # Edit .env with your local nightscout-librelink-up or Nightscout URL
-docker build -t glucosense .
+docker build -t glucoassist .
 docker run -d \
-  --name glucosense \
+  --name glucoassist \
   -p 3500:80 \
-  -v glucosense_data:/data \
+  -v glucoassist_data:/data \
   --env-file .env \
-  glucosense
+  glucoassist
 ```
 
 Open `http://localhost:3500`
@@ -47,7 +47,7 @@ All configuration is via environment variables. See `.env.example` for the full 
 Set `CGM_SOURCE=librelink` and point `LIBRELINK_URL` at your
 [nightscout-librelink-up](https://github.com/timoschlueter/nightscout-librelink-up) instance.
 No token is required — the librelink connector authenticates via the LibreLink credentials
-stored in the nightscout-librelink-up container, not in GlucoSense.
+stored in the nightscout-librelink-up container, not in GlucoAssist.
 
 ### CGM source: Nightscout
 
@@ -57,7 +57,7 @@ Set `CGM_SOURCE=nightscout` and configure both variables below.
 `http://192.168.1.50:1337` or `https://mysite.herokuapp.com`.
 
 **`NIGHTSCOUT_TOKEN`** — the raw `API_SECRET` you set when you deployed Nightscout.
-GlucoSense sends it in the `API-SECRET` HTTP header when polling
+GlucoAssist sends it in the `API-SECRET` HTTP header when polling
 `/api/v1/entries.json`.
 
 How to find your `API_SECRET`:
@@ -82,7 +82,7 @@ blank only if your Nightscout instance runs without authentication (not recommen
 | `NIGHTSCOUT_URL` | if nightscout | — | Nightscout base URL |
 | `NIGHTSCOUT_TOKEN` | no | — | Nightscout `API_SECRET` |
 | `INGEST_INTERVAL_SECONDS` | no | `300` | Scheduler interval (seconds) |
-| `DATABASE_PATH` | no | `/data/glucosense.db` | SQLite file path inside container |
+| `DATABASE_PATH` | no | `/data/glucoassist.db` | SQLite file path inside container |
 | `APP_SECRET_KEY` | yes | — | Random secret for FastAPI sessions |
 | `RETRAIN_INTERVAL_HOURS` | no | `24` | Forecast model retrain frequency |
 
@@ -90,7 +90,7 @@ See `.env.example` for a ready-to-fill template.
 
 ## Unraid
 
-Import `unraid/GlucoSense.xml` via Community Applications → Install from template URL, or place the XML in `/boot/config/plugins/community.applications/AppsData/` manually.
+Import `unraid/GlucoAssist.xml` via Community Applications → Install from template URL, or place the XML in `/boot/config/plugins/community.applications/AppsData/` manually.
 
 ## Data
 
