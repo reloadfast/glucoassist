@@ -1,5 +1,20 @@
 import type { Tz } from '@/components/TimezoneProvider'
 
+const TREND_ARROWS: Record<string, string> = {
+  DoubleUp: '↑↑',
+  SingleUp: '↑',
+  FortyFiveUp: '↗',
+  Flat: '→',
+  FortyFiveDown: '↘',
+  SingleDown: '↓',
+  DoubleDown: '↓↓',
+}
+
+export function formatTrend(trend: string | null | undefined): string {
+  if (!trend) return '—'
+  return TREND_ARROWS[trend] ?? trend
+}
+
 const LOCAL_FMT = new Intl.DateTimeFormat(undefined, {
   day: '2-digit',
   month: 'short',

@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/table'
 import { useTimezone } from '@/components/TimezoneProvider'
 import type { GlucoseReading } from '@/lib/api'
-import { formatTs } from '@/lib/formatters'
+import { formatTs, formatTrend } from '@/lib/formatters'
 
 interface Props {
   readings: GlucoseReading[]
@@ -44,7 +44,7 @@ export default function ReadingsTable({ readings }: Props) {
               {formatTs(r.timestamp, tz)}
             </TableCell>
             <TableCell className={glucoseClass(r.glucose_mg_dl)}>{r.glucose_mg_dl} mg/dL</TableCell>
-            <TableCell>{r.trend_arrow ?? '—'}</TableCell>
+            <TableCell>{formatTrend(r.trend_arrow)}</TableCell>
             <TableCell className="text-sm text-muted-foreground capitalize">{r.source}</TableCell>
           </TableRow>
         ))}

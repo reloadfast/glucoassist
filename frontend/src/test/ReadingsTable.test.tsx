@@ -29,8 +29,8 @@ describe('ReadingsTable', () => {
     render(<ReadingsTable readings={mockReadings} />)
     expect(screen.getByText('120 mg/dL')).toBeInTheDocument()
     expect(screen.getByText('65 mg/dL')).toBeInTheDocument()
-    expect(screen.getByText('Flat')).toBeInTheDocument()
-    expect(screen.getByText('DoubleDown')).toBeInTheDocument()
+    expect(screen.getByText('→')).toBeInTheDocument()
+    expect(screen.getByText('↓↓')).toBeInTheDocument()
   })
 
   it('shows no readings message when empty', () => {
