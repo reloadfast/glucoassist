@@ -132,14 +132,36 @@ Enables automatic daily ingest of resting heart rate, weight, sleep hours,
 and stress level — used by the sleep-glucose and stress-hyperglycaemia
 pattern detectors.
 
+**Step 1 — Enable in `.env`:**
+
 ```env
 GARMIN_ENABLED=true
 GARMIN_USERNAME=your-email@example.com
 GARMIN_PASSWORD=your-garmin-password
+GARMIN_TOKENSTORE=/data/garmin_tokens
 ```
 
-Garmin credentials are stored only in your local environment / Docker secrets.
-They are never transmitted anywhere other than the official Garmin Connect API.
+**Step 2 — Seed authentication tokens (required):**
+
+GlucoAssist caches Garmin OAuth tokens to avoid hitting the Garmin SSO on
+every poll, and to support accounts with MFA/2FA enabled. Run the one-time
+login script after the container is up:
+
+```bash
+docker exec -it glucoassist python /app/scripts/garmin_login.py
+```
+
+If your account has MFA enabled, you will be prompted to enter a code from
+your authenticator app. Tokens are written to `GARMIN_TOKENSTORE`
+(`/data/garmin_tokens` by default), which is on the same persistent volume
+as the database and survives container restarts and upgrades.
+
+Once tokens are saved, the ingest job runs automatically every hour. No
+further action is needed unless you change your Garmin password, in which
+case re-run the script to refresh the tokens.
+
+Garmin credentials are stored only in your local environment / Docker secrets
+and are never transmitted anywhere other than the official Garmin Connect API.
 
 ---
 
@@ -160,6 +182,7 @@ They are never transmitted anywhere other than the official Garmin Connect API.
 | `GARMIN_ENABLED` | no | `false` | Enable Garmin Connect integration |
 | `GARMIN_USERNAME` | if garmin | — | Garmin Connect account email |
 | `GARMIN_PASSWORD` | if garmin | — | Garmin Connect account password |
+| `GARMIN_TOKENSTORE` | no | `/data/garmin_tokens` | Directory for cached OAuth tokens (must be on a persistent volume) |
 | `GARMIN_INGEST_INTERVAL_SECONDS` | no | `3600` | Garmin poll interval (minimum 3600) |
 
 Generate a secure `APP_SECRET_KEY`:
