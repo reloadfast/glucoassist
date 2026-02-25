@@ -256,6 +256,8 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
     )
     iob_values: list[float] = []
     for ts in timestamps:
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
         cutoff = ts - timedelta(minutes=RAPID_DIA_MIN)
         total = 0.0
         for d in rapid_doses:
