@@ -89,6 +89,14 @@ def models_exist() -> bool:
     return all(_model_path(h).exists() for h in HORIZONS)
 
 
+def _delete_live_models() -> None:
+    """Remove all live model files (forces retrain on next scheduled run)."""
+    for horizon_min in HORIZONS:
+        p = _model_path(horizon_min)
+        if p.exists():
+            p.unlink()
+
+
 # ── Registry helpers ───────────────────────────────────────────────────────────
 
 
@@ -421,6 +429,29 @@ def get_forecast(db: Session) -> ForecastResponse:
         return ForecastResponse(
             model_trained=False, forecasts=[], overall_risk="unknown", meta=meta
         )
+
+    # Guard against stale models trained with a different feature count.
+    for horizon_min in HORIZONS:
+        try:
+            hm_check: _HorizonModel = joblib.load(_model_path(horizon_min))
+            if hm_check.scaler.n_features_in_ != N_FEATURES:
+                logger.warning(
+                    "Forecasting: stale model h%d expects %d features but N_FEATURES=%d"
+                    " — purging live models for retrain",
+                    horizon_min,
+                    hm_check.scaler.n_features_in_,
+                    N_FEATURES,
+                )
+                _delete_live_models()
+                return ForecastResponse(
+                    model_trained=False, forecasts=[], overall_risk="unknown", meta=meta
+                )
+        except Exception:
+            logger.exception("Forecasting: failed to validate model h%d — purging", horizon_min)
+            _delete_live_models()
+            return ForecastResponse(
+                model_trained=False, forecasts=[], overall_risk="unknown", meta=meta
+            )
 
     rows = (
         db.query(GlucoseReading.timestamp, GlucoseReading.glucose_mg_dl)

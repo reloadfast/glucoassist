@@ -79,3 +79,7 @@ Desktop.ini
 # === LOGS ===
 *.log
 logs/
+
+# === TRP ===
+trp/
+trp_logs/
