@@ -1,9 +1,10 @@
-import { Menu, Moon, Sun, X } from 'lucide-react'
+import { Check, Menu, Moon, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/components/ThemeProvider'
+import { useAppVersion } from '@/hooks/useAppVersion'
 
 const navItems = [
   { to: '/', label: 'Dashboard' },
@@ -21,9 +22,38 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
   }`
 }
 
+function VersionChip({ version }: { version: string }) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    void navigator.clipboard.writeText(`v${version}`).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label={`App version v${version} — click to copy`}
+      className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors flex items-center gap-0.5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-sm"
+    >
+      {copied ? (
+        <>
+          <Check className="h-3 w-3 text-green-500" />
+          <span className="text-green-500">✓</span>
+        </>
+      ) : (
+        `v${version}`
+      )}
+    </button>
+  )
+}
+
 export default function AppLayout() {
   const { theme, toggle } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const version = useAppVersion()
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,6 +68,7 @@ export default function AppLayout() {
             ))}
           </nav>
           <div className="flex items-center gap-2 ml-auto md:ml-0">
+            <VersionChip version={version} />
             <Button
               variant="ghost"
               size="icon"
