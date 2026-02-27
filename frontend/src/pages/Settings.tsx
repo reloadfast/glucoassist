@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { HelpPopover } from '@/components/HelpPopover'
+import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
 import { getGarminStatus, postRetrain } from '@/lib/api'
@@ -63,7 +65,45 @@ export default function Settings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Forecast Model</CardTitle>
+          <CardTitle className="flex items-center gap-1.5">
+            Forecast Model
+            <HelpSheet title="About this model" variant="link" triggerLabel="About this model">
+              <HelpSection title="What the forecast does">
+                <p>
+                  Predicts your glucose level at 30, 60, and 120 minutes from now using Ridge
+                  regression models trained on your own CGM history.
+                </p>
+              </HelpSection>
+              <HelpSection title="What feeds it">
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Last 6 glucose readings (30-minute window)</li>
+                  <li>Rate of change</li>
+                  <li>Time of day and day of week</li>
+                  <li>Insulin on Board (65-min linear decay)</li>
+                </ul>
+              </HelpSection>
+              <HelpSection title="Model promotion logic">
+                <p>
+                  A new model only replaces the live model if its mean MAE strictly improves across
+                  all three horizons. The last 50 training events are kept in the registry for
+                  review.
+                </p>
+              </HelpSection>
+              <HelpSection title="Retraining">
+                <p>
+                  Models are retrained automatically every 24 hours when new data accumulates. You
+                  can also trigger retraining manually using the button below. Training requires a
+                  minimum of 288 readings (one full day of CGM data).
+                </p>
+              </HelpSection>
+              <HelpSection title="Limitations">
+                <p>
+                  Decision-support only. The model cannot account for unlogged meals, sensor lag, or
+                  unusual physiological events. Always apply clinical judgement.
+                </p>
+              </HelpSection>
+            </HelpSheet>
+          </CardTitle>
           <CardDescription>
             Ridge regression trained on your CGM history. Models are retrained automatically every
             24 hours and only promoted when the new model improves accuracy.
@@ -78,11 +118,42 @@ export default function Settings() {
             </div>
           ) : (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
-              <dt className="text-muted-foreground">Last trained</dt>
+              <dt className="text-muted-foreground flex items-center gap-1">
+                Last trained
+                <HelpPopover title="Last trained">
+                  <p>
+                    The timestamp of the most recent successful training run. The model is
+                    automatically retrained when enough new data accumulates. You can also trigger
+                    retraining manually.
+                  </p>
+                </HelpPopover>
+              </dt>
               <dd>{meta?.last_trained ? formatTs(meta.last_trained, tz) : '—'}</dd>
-              <dt className="text-muted-foreground">Training samples</dt>
+              <dt className="text-muted-foreground flex items-center gap-1">
+                Training samples
+                <HelpPopover title="Training samples">
+                  <p>
+                    Total number of 5-minute CGM readings used to train the model. The minimum
+                    required for training is 288 (one full day). More data generally means more
+                    reliable predictions.
+                  </p>
+                </HelpPopover>
+              </dt>
               <dd>{meta?.training_samples ?? '—'}</dd>
-              <dt className="text-muted-foreground">MAE (30 / 60 / 120 min)</dt>
+              <dt className="text-muted-foreground flex items-center gap-1">
+                MAE (30 / 60 / 120 min)
+                <HelpPopover title="Mean Absolute Error (MAE)">
+                  <p>
+                    The average difference in mg/dL between the model's predictions and your actual
+                    glucose values on held-out (validation) data. Lower is better.
+                  </p>
+                  <p>
+                    Longer horizons typically have higher MAE because the future is harder to
+                    predict. Compare values across training runs to gauge whether the model is
+                    improving.
+                  </p>
+                </HelpPopover>
+              </dt>
               <dd className="tabular-nums">
                 {meta?.mae_per_horizon
                   ? `${meta.mae_per_horizon['h30']} / ${meta.mae_per_horizon['h60']} / ${meta.mae_per_horizon['h120']} mg/dL`

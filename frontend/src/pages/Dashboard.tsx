@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GlucoseChart, { type EventMarker } from '@/components/GlucoseChart'
+import { HelpPopover } from '@/components/HelpPopover'
 import InsightsCard from '@/components/InsightsCard'
 import LogButtons from '@/components/LogButtons'
 import ReadingsTable from '@/components/ReadingsTable'
@@ -112,7 +113,45 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardDescription>Latest Reading</CardDescription>
+            <CardDescription className="flex items-center gap-1">
+              Latest Reading
+              <HelpPopover title="Blood glucose (mg/dL)">
+                <p>
+                  Glucose concentration in your blood, measured in milligrams per deciliter. Your
+                  CGM sensor updates this approximately every 5 minutes.
+                </p>
+                <table className="w-full text-xs mt-2 border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left pb-1 font-medium text-foreground">Range</th>
+                      <th className="text-left pb-1 font-medium text-foreground">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr>
+                      <td className="py-0.5 pr-3">Hypo (low)</td>
+                      <td>&lt; 70 mg/dL</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">Normal target</td>
+                      <td>70–180 mg/dL</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">High</td>
+                      <td>&gt; 180 mg/dL</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">Very high</td>
+                      <td>&gt; 250 mg/dL</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="mt-2 text-xs">
+                  These are general reference values. Your personal targets may differ — always
+                  follow guidance from your healthcare team.
+                </p>
+              </HelpPopover>
+            </CardDescription>
             <CardTitle className="text-4xl">{loading ? '…' : glucoseDisplay}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -120,8 +159,20 @@ export default function Dashboard() {
               {latest ? `Source: ${latest.source}` : 'No data yet'}
             </p>
             {summary?.iob_units != null && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1 inline-flex items-center gap-1">
                 {summary.iob_units}u active insulin
+                <HelpPopover title="Insulin on Board (IOB)">
+                  <p>
+                    An estimate of how much rapid-acting insulin from your recent doses is still
+                    active in your body.
+                  </p>
+                  <p>
+                    Calculated using a linear decay model over 65 minutes (assumed Duration of
+                    Insulin Action for rapid-acting analogues). This is an approximation — actual
+                    activity depends on insulin type, injection site, and individual physiology.
+                  </p>
+                  <p>Only doses you have logged in GlucoAssist are included.</p>
+                </HelpPopover>
               </p>
             )}
           </CardContent>
@@ -129,7 +180,56 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardDescription>Trend</CardDescription>
+            <CardDescription className="flex items-center gap-1">
+              Trend
+              <HelpPopover title="Trend arrow">
+                <p>
+                  Shows the direction and rate of change of your glucose over the last 15 minutes.
+                </p>
+                <table className="w-full text-xs mt-2 border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left pb-1 font-medium text-foreground">Arrow</th>
+                      <th className="text-left pb-1 font-medium text-foreground">Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr>
+                      <td className="py-0.5 pr-3">↑↑ Rising rapidly</td>
+                      <td>&gt; +3 mg/dL/min</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">↑ Rising</td>
+                      <td>+2 to +3</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">↗ Rising slowly</td>
+                      <td>+1 to +2</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">→ Flat</td>
+                      <td>±1 mg/dL/min</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">↘ Falling slowly</td>
+                      <td>−1 to −2</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">↓ Falling</td>
+                      <td>−2 to −3</td>
+                    </tr>
+                    <tr>
+                      <td className="py-0.5 pr-3">↓↓ Falling rapidly</td>
+                      <td>&lt; −3 mg/dL/min</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="mt-2 text-xs">
+                  A rapidly falling arrow near the low range is a prompt to act sooner than the
+                  number alone suggests.
+                </p>
+              </HelpPopover>
+            </CardDescription>
             <CardTitle className="text-4xl">{loading ? '…' : trendArrow}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -143,7 +243,26 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardDescription>Time in Range (24h)</CardDescription>
+            <CardDescription className="flex items-center gap-1">
+              Time in Range (24h)
+              <HelpPopover title="Time in Range (TIR)">
+                <p>
+                  The percentage of your CGM readings over the last 24 hours that fell between 70
+                  and 180 mg/dL — your target glucose range.
+                </p>
+                <p>
+                  The international consensus target for most people with type 1 diabetes is ≥ 70%
+                  TIR. Your personal target may differ.
+                </p>
+                <p>
+                  Minimising time below range (TBR, &lt; 70 mg/dL) takes priority over all other
+                  metrics.
+                </p>
+                <p className="text-xs mt-2">
+                  Decision-support only — always follow guidance from your healthcare team.
+                </p>
+              </HelpPopover>
+            </CardDescription>
             <CardTitle className="text-4xl">{loading ? '…' : tirDisplay}</CardTitle>
           </CardHeader>
           <CardContent>
