@@ -2,6 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/components/ThemeProvider', () => ({
+  useTheme: () => ({ theme: 'system', resolvedTheme: 'light', setTheme: vi.fn() }),
+}))
+
 vi.mock('@/hooks/useModelRegistry', () => ({
   useModelRegistry: () => ({
     meta: null,

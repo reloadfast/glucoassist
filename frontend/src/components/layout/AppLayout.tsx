@@ -1,9 +1,9 @@
-import { Check, Menu, Moon, Sun, X } from 'lucide-react'
+import { Check, Menu, Monitor, Moon, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
-import { useTheme } from '@/components/ThemeProvider'
+import { useTheme, type ThemeMode } from '@/components/ThemeProvider'
 import { useAppVersion } from '@/hooks/useAppVersion'
 
 const navItems = [
@@ -51,10 +51,23 @@ function VersionChip({ version }: { version: string }) {
   )
 }
 
+const THEME_CYCLE: ThemeMode[] = ['system', 'light', 'dark']
+
+const THEME_LABELS: Record<ThemeMode, string> = {
+  system: 'Theme: System — click for Light',
+  light: 'Theme: Light — click for Dark',
+  dark: 'Theme: Dark — click for System',
+}
+
 export default function AppLayout() {
-  const { theme, toggle } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const version = useAppVersion()
+
+  function cycleTheme() {
+    const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length]
+    setTheme(next)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,10 +86,16 @@ export default function AppLayout() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggle}
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onClick={cycleTheme}
+              aria-label={THEME_LABELS[theme]}
             >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === 'system' ? (
+                <Monitor className="h-4 w-4" />
+              ) : theme === 'dark' ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
             </Button>
             <Button
               variant="ghost"
