@@ -75,14 +75,32 @@ def test_already_ingested_false_when_empty(db_session) -> None:
 
 
 @pytest.mark.unit
-def test_already_ingested_true_when_row_exists(db_session) -> None:
+def test_already_ingested_true_when_row_has_data(db_session) -> None:
+    # Row must have at least one non-null metric field to count as ingested
     metric = HealthMetric(
         timestamp=datetime(2026, 2, 23, 0, 0, 0),
         source="garmin",
+        heart_rate_bpm=60,
     )
     db_session.add(metric)
     db_session.commit()
     assert _already_ingested(db_session, date(2026, 2, 23))
+
+
+@pytest.mark.unit
+def test_already_ingested_false_when_row_is_all_null(db_session) -> None:
+    # An all-null row (empty outcome) must not block retry
+    metric = HealthMetric(
+        timestamp=datetime(2026, 2, 23, 0, 0, 0),
+        source="garmin",
+        heart_rate_bpm=None,
+        weight_kg=None,
+        sleep_hours=None,
+        stress_level=None,
+    )
+    db_session.add(metric)
+    db_session.commit()
+    assert not _already_ingested(db_session, date(2026, 2, 23))
 
 
 @pytest.mark.unit
@@ -129,6 +147,7 @@ def test_run_garmin_ingest_skips_duplicate(db_session) -> None:
     metric = HealthMetric(
         timestamp=datetime(today.year, today.month, today.day, 0, 0, 0),
         source="garmin",
+        heart_rate_bpm=60,  # non-null so _already_ingested returns True
     )
     db_session.add(metric)
     db_session.commit()
@@ -275,10 +294,10 @@ def test_run_garmin_ingest_saves_tokens_on_first_login(db_session, tmp_path) -> 
 def test_run_garmin_ingest_loads_tokens_when_present(db_session, tmp_path) -> None:
     """When token files exist, login is called with tokenstore instead of credentials."""
     mock_client = MagicMock()
-    mock_client.get_stats.return_value = {}
-    mock_client.get_body_composition.return_value = None
-    mock_client.get_sleep_data.return_value = None
-    mock_client.get_stress_data.return_value = None
+    mock_client.get_stats.return_value = {"restingHeartRate": 62}
+    mock_client.get_body_composition.return_value = {"totalAverage": {"weight": 72000}}
+    mock_client.get_sleep_data.return_value = {"dailySleepDTO": {"sleepTimeSeconds": 25200}}
+    mock_client.get_stress_data.return_value = {"avgStressLevel": 25}
 
     mock_mod = _make_garmin_mock(mock_client)
     tokenstore = str(tmp_path / "tokens")

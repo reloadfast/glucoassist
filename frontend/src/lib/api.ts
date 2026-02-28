@@ -505,3 +505,23 @@ export async function deleteFoodItem(id: number): Promise<void> {
   const res = await fetch(`${BASE}/food-items/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)
 }
+
+export interface GarminIngestLogEntry {
+  id: number
+  run_at: string
+  target_date: string
+  outcome: string
+  fields_populated: string | null
+  error_detail: string | null
+  retry_count: number
+  created_at: string
+}
+
+export interface GarminIngestLogResponse {
+  entries: GarminIngestLogEntry[]
+  count: number
+}
+
+export function getGarminIngestLog(limit = 30): Promise<GarminIngestLogResponse> {
+  return apiFetch<GarminIngestLogResponse>(`/garmin/ingest-log?limit=${limit}`)
+}

@@ -101,6 +101,7 @@ vi.mock('@/lib/api', () => ({
   postRetrain: vi.fn(),
   getGarminStatus: () =>
     Promise.resolve({ enabled: false, username_configured: false, interval_seconds: 3600 }),
+  getGarminIngestLog: () => Promise.resolve({ entries: [], count: 0 }),
   getAppVersion: () => Promise.resolve({ status: 'ok', version: '0.2.0', environment: 'test' }),
 }))
 
