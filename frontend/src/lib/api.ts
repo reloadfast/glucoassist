@@ -493,6 +493,10 @@ export function getFoodItems(q?: string): Promise<FoodItemListResponse> {
   return apiFetch<FoodItemListResponse>(`/food-items${qs}`)
 }
 
+export function getFoodSuggestions(hour: number): Promise<FoodItemListResponse> {
+  return apiFetch<FoodItemListResponse>(`/food-items/suggestions?hour=${hour}`)
+}
+
 export function createFoodItem(data: FoodItemCreate): Promise<FoodItem> {
   return apiFetch<FoodItem>('/food-items', { method: 'POST', body: JSON.stringify(data) })
 }

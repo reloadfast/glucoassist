@@ -28,17 +28,21 @@ const mockItems = [
 ]
 
 const mockGetFoodItems = vi.fn()
+const mockGetFoodSuggestions = vi.fn()
 const mockCreateFoodItem = vi.fn()
 const mockUpdateFoodItem = vi.fn()
 const mockDeleteFoodItem = vi.fn()
 const mockPostMeal = vi.fn()
+const mockPostInsulin = vi.fn()
 
 vi.mock('@/lib/api', () => ({
   getFoodItems: (...args: unknown[]) => mockGetFoodItems(...args),
+  getFoodSuggestions: (...args: unknown[]) => mockGetFoodSuggestions(...args),
   createFoodItem: (...args: unknown[]) => mockCreateFoodItem(...args),
   updateFoodItem: (...args: unknown[]) => mockUpdateFoodItem(...args),
   deleteFoodItem: (...args: unknown[]) => mockDeleteFoodItem(...args),
   postMeal: (...args: unknown[]) => mockPostMeal(...args),
+  postInsulin: (...args: unknown[]) => mockPostInsulin(...args),
 }))
 
 vi.mock('react-router-dom', () => ({
@@ -60,10 +64,12 @@ import Food from '@/pages/Food'
 
 function setupMocks() {
   mockGetFoodItems.mockResolvedValue({ items: mockItems, count: mockItems.length })
+  mockGetFoodSuggestions.mockResolvedValue({ items: [], count: 0 })
   mockCreateFoodItem.mockResolvedValue({ ...mockItems[0], id: 99 })
   mockUpdateFoodItem.mockResolvedValue(mockItems[0])
   mockDeleteFoodItem.mockResolvedValue(undefined)
   mockPostMeal.mockResolvedValue({ id: 42, carbs_g: 21, food_item_ids: [1] })
+  mockPostInsulin.mockResolvedValue({ id: 10 })
 }
 
 // Wait until Library section is fully loaded (edit buttons are unique to Library)
@@ -156,80 +162,38 @@ describe('Food Library page — Library section', () => {
   })
 })
 
-// ─── Quick Log section ────────────────────────────────────────────────────────
+// ─── Log Meal card section ────────────────────────────────────────────────────
 
-describe('Food Library page — Quick Log', () => {
+describe('Food Library page — Log Meal card', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setupMocks()
   })
 
-  it('shows Frequent panel for items with use_count > 0', async () => {
+  it('shows Log Meal card content on page', async () => {
     render(<Food />)
-    await waitFor(() => expect(screen.getByText('Frequent')).toBeInTheDocument())
+    // Card description text is always present on page load
+    await waitFor(() =>
+      expect(screen.getByText(/log a meal using your food library/i)).toBeInTheDocument(),
+    )
   })
 
-  it('shows Recent panel for items with last_used_at', async () => {
+  it('shows "Log Meal" trigger button on the page', async () => {
     render(<Food />)
-    await waitFor(() => expect(screen.getByText('Recent')).toBeInTheDocument())
-  })
-
-  it('shows search results when query typed', async () => {
-    const user = userEvent.setup()
-    render(<Food />)
-    await waitFor(() => screen.getByLabelText(/search food items/i))
-    await user.type(screen.getByLabelText(/search food items/i), 'apple')
-    // Search results show carbs_per_100g as "14g carbs/100g"
-    await waitFor(() => expect(screen.getByText('14g carbs/100g')).toBeInTheDocument())
-  })
-
-  it('matches on alias when searching', async () => {
-    const user = userEvent.setup()
-    render(<Food />)
-    await waitFor(() => screen.getByLabelText(/search food items/i))
-    await user.type(screen.getByLabelText(/search food items/i), 'porridge')
-    // Search result row appears with the food name
+    // The dialog trigger button text is exactly "Log Meal";
+    // HelpPopover has aria-label "Help: Log meal" — use exact-start match to distinguish.
     await waitFor(() => {
-      const results = screen.getAllByText('Rolled oats')
-      expect(results.length).toBeGreaterThan(0)
+      const btns = screen.getAllByRole('button', { name: /^log meal$/i })
+      expect(btns.length).toBeGreaterThan(0)
     })
   })
 
-  it('shows portion picker after selecting a food from Frequent panel', async () => {
+  it('opens LogMealDialog when trigger clicked', async () => {
     const user = userEvent.setup()
     render(<Food />)
-    await waitFor(() => screen.getByText('Frequent'))
-    // Find Apple button in the Frequent panel (first occurrence of 'Apple' as button text)
-    const appleBtn = screen.getAllByText('Apple')[0].closest('button')!
-    await user.click(appleBtn)
-    expect(screen.getByLabelText(/portion in grams/i)).toBeInTheDocument()
-  })
-
-  it('adds item to cart and shows total', async () => {
-    const user = userEvent.setup()
-    render(<Food />)
-    await waitFor(() => screen.getByText('Frequent'))
-    const appleBtn = screen.getAllByText('Apple')[0].closest('button')!
-    await user.click(appleBtn)
-    await user.click(screen.getByRole('button', { name: /^add$/i }))
-    await waitFor(() => expect(screen.getByText(/total:/i)).toBeInTheDocument())
-  })
-
-  it('calls postMeal with computed carbs on confirm', async () => {
-    const user = userEvent.setup()
-    render(<Food />)
-    await waitFor(() => screen.getByText('Frequent'))
-    const appleBtn = screen.getAllByText('Apple')[0].closest('button')!
-    await user.click(appleBtn)
-    await user.click(screen.getByRole('button', { name: /^add$/i }))
-    await user.click(screen.getByRole('button', { name: /confirm meal/i }))
-    await waitFor(() =>
-      expect(mockPostMeal).toHaveBeenCalledWith(
-        expect.objectContaining({
-          food_item_ids: [1],
-          label: 'Apple',
-        }),
-      ),
-    )
+    await waitFor(() => screen.getAllByRole('button', { name: /^log meal$/i }))
+    const triggerBtn = screen.getAllByRole('button', { name: /^log meal$/i })[0]
+    await user.click(triggerBtn)
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
   })
 })
