@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import {
+  CartesianGrid,
   Line,
   LineChart,
   ReferenceLine,
@@ -87,8 +88,9 @@ function MealResponseChart({ readings, mealTs }: { readings: GlucoseReading[]; m
     glucose: r.glucose_mg_dl,
   }))
   return (
-    <ResponsiveContainer width="100%" height={120}>
-      <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
+    <ResponsiveContainer width="100%" height={160}>
+      <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="min"
           tick={{ fontSize: 10 }}
@@ -97,13 +99,23 @@ function MealResponseChart({ readings, mealTs }: { readings: GlucoseReading[]; m
           domain={[0, 150]}
           ticks={[0, 30, 60, 90, 120, 150]}
         />
-        <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} width={36} />
+        <YAxis tick={{ fontSize: 10 }} domain={[40, 'auto']} unit=" mg/dL" width={72} />
         <Tooltip
           formatter={(v) => [`${v} mg/dL`, 'Glucose']}
           labelFormatter={(v) => `+${String(v)} min`}
         />
-        <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="3 3" />
-        <ReferenceLine y={180} stroke="#f97316" strokeDasharray="3 3" />
+        <ReferenceLine
+          y={70}
+          stroke="#ef4444"
+          strokeDasharray="4 4"
+          label={{ value: 'Low', fontSize: 9 }}
+        />
+        <ReferenceLine
+          y={180}
+          stroke="#f97316"
+          strokeDasharray="4 4"
+          label={{ value: 'High', fontSize: 9 }}
+        />
         <Line type="monotone" dataKey="glucose" dot={false} stroke="#22c55e" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
