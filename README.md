@@ -231,7 +231,7 @@ and are never transmitted anywhere other than the official Garmin Connect API.
 | `NIGHTSCOUT_TOKEN` | no | — | Nightscout `API_SECRET` |
 | **App** | | | |
 | `APP_SECRET_KEY` | **yes** | — | Long random string for session security |
-| `APP_ENV` | no | `production` | `production` or `development` |
+| `APP_ENV` | no | `production` | `production` or `development` — see [APP_ENV behaviour](#app_env-behaviour) |
 | `DATABASE_PATH` | no | `/data/glucoassist.db` | SQLite file path inside container |
 | `INGEST_INTERVAL_SECONDS` | no | `300` | Ingest scheduler interval |
 | `BACKFILL_DAYS` | no | `90` | Days of CGM history to import on first startup (0 = disabled, not supported for `librelink_direct` or `librelink_push`) |
@@ -248,6 +248,23 @@ openssl rand -hex 32
 # or
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+### APP_ENV behaviour
+
+`APP_ENV` accepts two values and affects three areas:
+
+| Area | `production` | `development` |
+|---|---|---|
+| **Log level** | INFO — structured output, no debug noise | DEBUG — verbose logs including SQL queries and scheduler ticks |
+| **CORS** | Same-origin only (safe behind Nginx reverse proxy) | All origins allowed (`*`) — needed when the Vite dev server runs on a different port |
+| **`/api/health` response** | Returns `"environment": "production"` | Returns `"environment": "development"` |
+
+**When to use each value:**
+
+- `production` — the correct value for all Docker deployments (Unraid, Compose, bare container). Nginx handles routing so CORS restrictions are irrelevant and debug logging would be noisy.
+- `development` — use only when running `uvicorn` directly outside Docker (e.g., `cd backend && uvicorn app.main:app --reload`) and accessing the API from a browser or frontend dev server on a different port.
+
+> **Note:** The Unraid Community Applications template ships with `APP_ENV=development` to simplify first-run debugging. Change it to `production` once you have confirmed the stack is working.
 
 ---
 
