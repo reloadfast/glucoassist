@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/select'
 import { HelpPopover } from '@/components/HelpPopover'
 import { HelpSheet, HelpSection } from '@/components/HelpSheet'
+import { useTheme } from '@/components/ThemeProvider'
+import type { ThemeMode } from '@/components/ThemeProvider'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { useAppVersion } from '@/hooks/useAppVersion'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
@@ -136,6 +138,7 @@ function GarminIngestLogTable({
 export default function Settings() {
   const { meta, retrainLog, loading, refresh } = useModelRegistry()
   const { tz, setTz } = useTimezone()
+  const { theme, setTheme } = useTheme()
   const version = useAppVersion()
   const [retraining, setRetraining] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -164,6 +167,35 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>Choose how the colour theme is applied across the app.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <label htmlFor="theme-select" className="text-sm font-medium min-w-[80px]">
+              Theme
+            </label>
+            <Select value={theme} onValueChange={(v) => setTheme(v as ThemeMode)}>
+              <SelectTrigger id="theme-select" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">System (follows OS)</SelectItem>
+                <SelectItem value="light">Light</SelectItem>
+                <SelectItem value="dark">Dark</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <strong>System mode</strong> follows your OS or browser preference and switches
+            automatically if your device changes theme (e.g. at sunset via macOS automatic
+            appearance). The header icon cycles through modes: <em>System → Light → Dark</em>.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

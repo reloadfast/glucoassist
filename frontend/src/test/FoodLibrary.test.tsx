@@ -49,7 +49,7 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('@/components/ThemeProvider', () => ({
-  useTheme: () => ({ theme: 'light', toggle: vi.fn() }),
+  useTheme: () => ({ theme: 'system', resolvedTheme: 'light', setTheme: vi.fn() }),
 }))
 
 // ─── imports after mocks ─────────────────────────────────────────────────────

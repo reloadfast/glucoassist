@@ -9,7 +9,7 @@ vi.mock('@/hooks/useAppVersion', () => ({
 }))
 
 vi.mock('@/hooks/useTheme', () => ({
-  useTheme: () => ({ theme: 'light', toggle: vi.fn() }),
+  useTheme: () => ({ theme: 'system', resolvedTheme: 'light', setTheme: vi.fn() }),
 }))
 
 // AppLayout uses react-router — mock Outlet and NavLink
@@ -21,7 +21,7 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('@/components/ThemeProvider', () => ({
-  useTheme: () => ({ theme: 'light', toggle: vi.fn() }),
+  useTheme: () => ({ theme: 'system', resolvedTheme: 'light', setTheme: vi.fn() }),
 }))
 
 vi.mock('@/hooks/useModelRegistry', () => ({
