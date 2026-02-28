@@ -1,9 +1,11 @@
-from datetime import datetime, timedelta
+import json
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.food_item import FoodItem
 from app.models.glucose import GlucoseReading
 from app.models.meal import Meal
 from app.schemas.meal import MealCreate, MealListResponse, MealOut, MealResponseData
@@ -32,8 +34,25 @@ def list_meals(
 
 @router.post("/meal", response_model=MealOut, status_code=201)
 def create_meal(payload: MealCreate, db: Session = Depends(get_db)) -> Meal:
-    meal = Meal(**payload.model_dump())
+    food_ids = payload.food_item_ids or []
+    meal = Meal(
+        timestamp=payload.timestamp,
+        carbs_g=payload.carbs_g,
+        label=payload.label,
+        notes=payload.notes,
+        food_item_ids=json.dumps(food_ids) if food_ids else None,
+    )
     db.add(meal)
+
+    # Update use_count and last_used_at for each referenced food item
+    if food_ids:
+        now = datetime.now(tz=UTC)
+        for fid in food_ids:
+            item = db.get(FoodItem, fid)
+            if item is not None:
+                item.use_count = (item.use_count or 0) + 1
+                item.last_used_at = now
+
     db.commit()
     db.refresh(meal)
     return meal

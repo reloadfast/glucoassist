@@ -37,6 +37,7 @@ export interface MealCreate {
   carbs_g: number
   label?: string
   notes?: string
+  food_item_ids?: number[]
 }
 
 export interface HealthMetricCreate {
@@ -284,6 +285,7 @@ export interface MealOut {
   carbs_g: number
   label: string | null
   notes: string | null
+  food_item_ids: number[] | null
   created_at: string
 }
 
@@ -452,4 +454,54 @@ export interface BasalWindowResponse {
 
 export function getBasalWindows(tz = 'UTC'): Promise<BasalWindowResponse> {
   return apiFetch<BasalWindowResponse>(`/analytics/basal-windows?tz=${encodeURIComponent(tz)}`)
+}
+
+// ─── Food library ───────────────────────────────────────────────────────────
+
+export interface FoodItem {
+  id: number
+  name: string
+  carbs_per_100g: number
+  default_portion_g: number
+  aliases: string[]
+  created_at: string
+  last_used_at: string | null
+  use_count: number
+}
+
+export interface FoodItemCreate {
+  name: string
+  carbs_per_100g: number
+  default_portion_g: number
+  aliases: string[]
+}
+
+export interface FoodItemUpdate {
+  name?: string
+  carbs_per_100g?: number
+  default_portion_g?: number
+  aliases?: string[]
+}
+
+export interface FoodItemListResponse {
+  items: FoodItem[]
+  count: number
+}
+
+export function getFoodItems(q?: string): Promise<FoodItemListResponse> {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : ''
+  return apiFetch<FoodItemListResponse>(`/food-items${qs}`)
+}
+
+export function createFoodItem(data: FoodItemCreate): Promise<FoodItem> {
+  return apiFetch<FoodItem>('/food-items', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateFoodItem(id: number, data: FoodItemUpdate): Promise<FoodItem> {
+  return apiFetch<FoodItem>(`/food-items/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+export async function deleteFoodItem(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/food-items/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`)
 }
