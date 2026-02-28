@@ -1,6 +1,6 @@
 import json
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -44,7 +44,7 @@ def suggest_food_items(
     db: Session = Depends(get_db),
 ) -> FoodItemListResponse:
     """Return up to 6 food items frequently eaten near the requested hour."""
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=90)
+    cutoff = datetime.now(tz=UTC) - timedelta(days=90)
     meals = (
         db.query(Meal)
         .filter(Meal.timestamp >= cutoff, Meal.food_item_ids.isnot(None))
@@ -54,7 +54,7 @@ def suggest_food_items(
     # Score food_item_ids by meals within ±2 hours of requested hour
     counts: Counter[int] = Counter()
     for meal in meals:
-        meal_hour = meal.timestamp.astimezone(timezone.utc).hour
+        meal_hour = meal.timestamp.astimezone(UTC).hour
         diff = min(abs(meal_hour - hour), 24 - abs(meal_hour - hour))
         if diff <= 2:
             try:
