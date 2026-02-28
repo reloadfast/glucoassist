@@ -7,21 +7,21 @@ import type { ForecastResponse } from '@/lib/api'
 
 const RISK_CONFIG = {
   moderate: {
-    bg: 'bg-amber-50 border-amber-200',
+    bg: 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/50',
     Icon: AlertTriangle,
-    iconClass: 'text-amber-500',
+    iconClass: 'text-amber-500 dark:text-amber-400',
     label: 'Moderate Risk',
   },
   high: {
-    bg: 'bg-orange-50 border-orange-200',
+    bg: 'bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800/50',
     Icon: AlertTriangle,
-    iconClass: 'text-orange-500',
+    iconClass: 'text-orange-500 dark:text-orange-400',
     label: 'High Risk',
   },
   critical: {
-    bg: 'bg-red-50 border-red-200',
+    bg: 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800/50',
     Icon: ShieldAlert,
-    iconClass: 'text-red-500',
+    iconClass: 'text-red-500 dark:text-red-400',
     label: 'Critical Risk',
   },
 } as const
