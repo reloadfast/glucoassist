@@ -275,6 +275,13 @@ and `http://localhost:3500/api/redoc` (ReDoc) when the container is running.
 
 ---
 
+## Further Documentation
+
+- [Forecast Model](docs/forecast-model.md) — how the 30/60/120-minute glucose prediction works, what data it needs, accuracy, and limitations
+- [CGM Sources](docs/cgm-sources.md) — detailed setup guides for all four data source modes, including docker-compose examples
+
+---
+
 ## Data & Privacy
 
 - All data is stored in a single SQLite file at `DATABASE_PATH`
