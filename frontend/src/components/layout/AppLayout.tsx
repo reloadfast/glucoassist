@@ -12,6 +12,7 @@ const navItems = [
   { to: '/patterns', label: 'Patterns' },
   { to: '/intelligence', label: 'Intelligence' },
   { to: '/basal', label: 'Basal' },
+  { to: '/food', label: 'Food' },
   { to: '/logs', label: 'Logs' },
   { to: '/settings', label: 'Settings' },
 ]

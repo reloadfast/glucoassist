@@ -9,6 +9,7 @@ const Statistics = lazy(() => import('@/pages/Statistics'))
 const Patterns = lazy(() => import('@/pages/Patterns'))
 const Intelligence = lazy(() => import('@/pages/Intelligence'))
 const Basal = lazy(() => import('@/pages/Basal'))
+const Food = lazy(() => import('@/pages/Food'))
 const Logs = lazy(() => import('@/pages/Logs'))
 const Settings = lazy(() => import('@/pages/Settings'))
 
@@ -63,6 +64,14 @@ export default function App() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <Basal />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/food"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <Food />
               </Suspense>
             }
           />
