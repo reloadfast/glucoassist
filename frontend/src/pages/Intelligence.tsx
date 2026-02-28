@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HelpPopover, HelpFormula } from '@/components/HelpPopover'
 import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useRatios } from '@/hooks/useRatios'
@@ -41,9 +42,26 @@ function RatioRow({ block }: { block: TimeBlockRatio }) {
       </td>
       <td className="py-2 pl-2">
         {block.insufficient_data && (
-          <Badge variant="secondary" className="text-xs">
-            {block.icr_samples}/{block.cf_samples} obs.
-          </Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="secondary" className="text-xs cursor-help">
+                {block.icr_samples} ICR / {block.cf_samples} CF obs.
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs">
+              <p>
+                <strong>{block.icr_samples}</strong> ICR observations — meal + bolus pairs logged in
+                this time block.
+              </p>
+              <p className="mt-1">
+                <strong>{block.cf_samples}</strong> CF observations — correction bolus events
+                (insulin without a concurrent meal).
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                At least 5 of each are needed before an estimate appears.
+              </p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </td>
     </tr>
@@ -168,13 +186,20 @@ export default function Intelligence() {
                       <th className="py-2 pl-2 text-left text-muted-foreground font-medium">
                         <HeaderWithHelp label="Status" title="Observation Count">
                           <p>
-                            Number of logged events used to calculate the estimate for this time
-                            block. At least 5 paired records are required before an estimate is
-                            shown.
+                            Shows how many qualifying events have been logged for each estimate in
+                            this time block. The badge format is <strong>ICR obs. / CF obs.</strong>
                           </p>
                           <p>
-                            Fewer than 10 events should be treated as preliminary. Fewer than 5 are
-                            shown as a count only (insufficient data).
+                            <strong>ICR observations</strong> — meal + bolus insulin pairs where
+                            both were logged within the same time block.
+                          </p>
+                          <p>
+                            <strong>CF observations</strong> — correction bolus events (insulin
+                            logged without a concurrent meal).
+                          </p>
+                          <p>
+                            At least 5 of each are required before an estimate appears. Fewer than
+                            10 should be treated as preliminary.
                           </p>
                         </HeaderWithHelp>
                       </th>
