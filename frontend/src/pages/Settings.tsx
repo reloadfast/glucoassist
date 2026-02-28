@@ -16,7 +16,8 @@ import { useTimezone } from '@/components/TimezoneProvider'
 import { useAppVersion } from '@/hooks/useAppVersion'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
 import { getGarminStatus, postRetrain } from '@/lib/api'
-import type { GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
+import type { GarminIngestLogEntry, GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
+import { useGarminIngestLog } from '@/hooks/useGarminIngestLog'
 import { formatTs } from '@/lib/formatters'
 
 function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
@@ -34,6 +35,104 @@ function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
   )
 }
 
+const OUTCOME_STYLES: Record<string, string> = {
+  success: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  partial: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  empty: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  skipped: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  auth_error: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  rate_limited: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  connection_error: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  error: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+}
+
+function OutcomeBadge({ outcome }: { outcome: string }) {
+  const style = OUTCOME_STYLES[outcome] ?? OUTCOME_STYLES.error
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${style}`}
+    >
+      {outcome.replace('_', ' ')}
+    </span>
+  )
+}
+
+function GarminIngestLogTable({
+  entries,
+  loading,
+}: {
+  entries: GarminIngestLogEntry[]
+  loading: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (!expanded) {
+    return (
+      <button
+        className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+        onClick={() => setExpanded(true)}
+        aria-label="Show recent ingest runs"
+      >
+        Show recent ingest runs
+      </button>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">Recent ingest runs</span>
+        <button
+          className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+          onClick={() => setExpanded(false)}
+        >
+          Hide
+        </button>
+      </div>
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Loading…</p>
+      ) : entries.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No ingest runs recorded yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b text-muted-foreground">
+                <th className="text-left pb-1 pr-3 font-normal">Date</th>
+                <th className="text-left pb-1 pr-3 font-normal">Outcome</th>
+                <th className="text-left pb-1 pr-3 font-normal">Fields</th>
+                <th className="text-left pb-1 font-normal">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((e) => (
+                <tr key={e.id} className="border-b last:border-0">
+                  <td className="py-1 pr-3 text-muted-foreground whitespace-nowrap">
+                    {e.target_date}
+                  </td>
+                  <td className="py-1 pr-3 whitespace-nowrap">
+                    <OutcomeBadge outcome={e.outcome} />
+                    {e.retry_count > 0 && (
+                      <span className="ml-1 text-muted-foreground">×{e.retry_count + 1}</span>
+                    )}
+                  </td>
+                  <td className="py-1 pr-3 text-muted-foreground">{e.fields_populated ?? '—'}</td>
+                  <td
+                    className="py-1 text-muted-foreground max-w-[200px] truncate"
+                    title={e.error_detail ?? ''}
+                  >
+                    {e.error_detail ?? ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Settings() {
   const { meta, retrainLog, loading, refresh } = useModelRegistry()
   const { tz, setTz } = useTimezone()
@@ -41,6 +140,7 @@ export default function Settings() {
   const [retraining, setRetraining] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [garminStatus, setGarminStatus] = useState<GarminStatusResponse | null>(null)
+  const garminLog = useGarminIngestLog(20)
 
   useEffect(() => {
     getGarminStatus()
@@ -231,7 +331,7 @@ export default function Settings() {
             Configure via environment variables — credentials are never stored in the database.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {garminStatus ? (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
               <dt className="text-muted-foreground">Status</dt>
@@ -256,10 +356,12 @@ export default function Settings() {
           ) : (
             <p className="text-sm text-muted-foreground">Loading…</p>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Set <code>GARMIN_ENABLED</code>, <code>GARMIN_USERNAME</code>, and{' '}
             <code>GARMIN_PASSWORD</code> environment variables to activate.
           </p>
+
+          <GarminIngestLogTable entries={garminLog.entries} loading={garminLog.loading} />
         </CardContent>
       </Card>
 

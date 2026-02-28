@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.models.garmin_ingest_log import GarminIngestLog
 from app.models.health import HealthMetric
 
 logger = logging.getLogger(__name__)
@@ -24,9 +25,14 @@ def _day_start(d: date) -> datetime:
 
 
 def _already_ingested(db: Session, target_date: date) -> bool:
+    """Return True only when an existing row has at least one non-null metric field.
+
+    An all-null row written by a previous empty-outcome run is treated as absent
+    so the next poll cycle can retry once the watch has synced.
+    """
     start = _day_start(target_date)
     end = start + timedelta(days=1)
-    return (
+    row = (
         db.query(HealthMetric)
         .filter(
             HealthMetric.source == "garmin",
@@ -34,8 +40,35 @@ def _already_ingested(db: Session, target_date: date) -> bool:
             HealthMetric.timestamp < end,
         )
         .first()
-        is not None
     )
+    if row is None:
+        return False
+    return any(
+        v is not None
+        for v in (row.heart_rate_bpm, row.weight_kg, row.sleep_hours, row.stress_level)
+    )
+
+
+def _write_log(
+    db: Session,
+    *,
+    run_at: datetime,
+    target_date: date,
+    outcome: str,
+    fields_populated: list[str] | None = None,
+    error_detail: str | None = None,
+    retry_count: int = 0,
+) -> None:
+    entry = GarminIngestLog(
+        run_at=run_at,
+        target_date=target_date,
+        outcome=outcome,
+        fields_populated=",".join(fields_populated) if fields_populated else None,
+        error_detail=error_detail[:500] if error_detail else None,
+        retry_count=retry_count,
+    )
+    db.add(entry)
+    db.commit()
 
 
 def _parse_rhr(stats: dict) -> int | None:
@@ -75,18 +108,26 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
     Fetch today's Garmin health data and upsert into health_metrics.
     Returns 1 if a new row was inserted, 0 otherwise.
     Enforces MIN_INTERVAL_SECONDS floor and uses exponential backoff on 429.
+    Writes one GarminIngestLog row per execution regardless of outcome.
     """
+    run_at = datetime.now(UTC)
+    target_date = _today_utc()
+
     if not settings.garmin_enabled:
+        _write_log(db, run_at=run_at, target_date=target_date, outcome="skipped",
+                   error_detail="Garmin disabled")
         return 0
 
     if not settings.garmin_username or not settings.garmin_password:
         logger.warning("Garmin: GARMIN_USERNAME/GARMIN_PASSWORD not set — skipping ingest")
+        _write_log(db, run_at=run_at, target_date=target_date, outcome="skipped",
+                   error_detail="Username/password not configured")
         return 0
-
-    target_date = _today_utc()
 
     if _already_ingested(db, target_date):
         logger.info("Garmin: entry for %s already exists — skipping", target_date)
+        _write_log(db, run_at=run_at, target_date=target_date, outcome="skipped",
+                   error_detail="Row with data already exists for this date")
         return 0
 
     try:
@@ -99,6 +140,8 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
         from garth.exc import GarthException, GarthHTTPError  # noqa: PLC0415
     except ImportError:
         logger.error("Garmin: garminconnect package not installed")
+        _write_log(db, run_at=run_at, target_date=target_date, outcome="error",
+                   error_detail="garminconnect package not installed")
         return 0
 
     date_str = target_date.isoformat()
@@ -126,6 +169,31 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
             sleep_hours = _parse_sleep(client.get_sleep_data(date_str))
             stress_level = _parse_stress(client.get_stress_data(date_str))
 
+            field_map = {
+                "rhr": rhr,
+                "weight": weight,
+                "sleep": sleep_hours,
+                "stress": stress_level,
+            }
+            populated = [k for k, v in field_map.items() if v is not None]
+
+            if not populated:
+                # All fields null — do not commit; leave the date open for retry
+                logger.warning(
+                    "Garmin: all metrics null for %s (watch not synced?) — skipping commit",
+                    target_date,
+                )
+                _write_log(
+                    db,
+                    run_at=run_at,
+                    target_date=target_date,
+                    outcome="empty",
+                    retry_count=attempt,
+                    error_detail="All four metric fields returned null; row not committed",
+                )
+                return 0
+
+            outcome = "success" if len(populated) == 4 else "partial"
             metric = HealthMetric(
                 timestamp=_day_start(target_date),
                 heart_rate_bpm=rhr,
@@ -136,8 +204,17 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
                 notes=f"Auto-imported from Garmin ({date_str})",
             )
             db.add(metric)
+            db.flush()
+            _write_log(
+                db,
+                run_at=run_at,
+                target_date=target_date,
+                outcome=outcome,
+                fields_populated=populated,
+                retry_count=attempt,
+            )
             db.commit()
-            logger.info("Garmin: inserted health metric for %s", target_date)
+            logger.info("Garmin: inserted health metric for %s (%s)", target_date, outcome)
             return 1
 
         except GarminConnectTooManyRequestsError:
@@ -152,24 +229,58 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
                 time.sleep(wait)
             else:
                 logger.error("Garmin: max retries exceeded after rate limiting")
+                _write_log(
+                    db,
+                    run_at=run_at,
+                    target_date=target_date,
+                    outcome="rate_limited",
+                    retry_count=attempt,
+                    error_detail="Max retries exceeded after 429",
+                )
                 return 0
 
-        except GarminConnectAuthenticationError:
+        except GarminConnectAuthenticationError as exc:
             logger.error("Garmin: authentication failed — check GARMIN_USERNAME/GARMIN_PASSWORD")
+            _write_log(
+                db,
+                run_at=run_at,
+                target_date=target_date,
+                outcome="auth_error",
+                retry_count=attempt,
+                error_detail=str(exc)[:500],
+            )
             return 0
 
         except GarthHTTPError as exc:
-            if "401" in str(exc):
+            detail = str(exc)
+            if "401" in detail:
                 logger.error(
                     "Garmin: authentication failed (401) — if MFA is enabled on your account, "
                     "pre-seed tokens by running: python scripts/garmin_login.py"
                 )
+                _write_log(
+                    db,
+                    run_at=run_at,
+                    target_date=target_date,
+                    outcome="auth_error",
+                    retry_count=attempt,
+                    error_detail=detail[:500],
+                )
             else:
                 logger.error("Garmin: HTTP error from garth: %s", exc)
+                _write_log(
+                    db,
+                    run_at=run_at,
+                    target_date=target_date,
+                    outcome="error",
+                    retry_count=attempt,
+                    error_detail=detail[:500],
+                )
             return 0
 
         except GarthException as exc:
-            if "Unexpected title" in str(exc):
+            detail = str(exc)
+            if "Unexpected title" in detail:
                 logger.error(
                     "Garmin: account uses Google/Apple sign-in — native credentials required. "
                     "Set a Garmin password via 'Forgot Password' at connect.garmin.com, "
@@ -178,14 +289,38 @@ def run_garmin_ingest(db: Session, settings: Settings) -> int:
                 )
             else:
                 logger.error("Garmin: SSO error: %s", exc)
+            _write_log(
+                db,
+                run_at=run_at,
+                target_date=target_date,
+                outcome="auth_error",
+                retry_count=attempt,
+                error_detail=detail[:500],
+            )
             return 0
 
         except GarminConnectConnectionError as exc:
             logger.error("Garmin: connection error: %s", exc)
+            _write_log(
+                db,
+                run_at=run_at,
+                target_date=target_date,
+                outcome="connection_error",
+                retry_count=attempt,
+                error_detail=str(exc)[:500],
+            )
             return 0
 
-        except Exception:
+        except Exception as exc:
             logger.exception("Garmin: unexpected error during ingest")
+            _write_log(
+                db,
+                run_at=run_at,
+                target_date=target_date,
+                outcome="error",
+                retry_count=attempt,
+                error_detail=str(exc)[:500],
+            )
             return 0
 
     return 0

@@ -14,11 +14,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTimezone } from '@/components/TimezoneProvider'
+import { useGarminIngestLog } from '@/hooks/useGarminIngestLog'
 import { useHealthLog } from '@/hooks/useHealthLog'
 import { useInsulinLog } from '@/hooks/useInsulinLog'
 import { useMealLog } from '@/hooks/useMealLog'
 import { deleteHealth, deleteInsulin, deleteMeal, getMealResponse } from '@/lib/api'
 import type {
+  GarminIngestLogEntry,
   GlucoseReading,
   HealthMetricOut,
   InsulinDoseOut,
@@ -123,6 +125,15 @@ export default function Logs() {
   const insulin = useInsulinLog()
   const meals = useMealLog()
   const health = useHealthLog()
+  const garminLog = useGarminIngestLog(90)
+  // Build date → most-recent ingest log entry map for Garmin health row indicators
+  const garminLogByDate = useMemo(() => {
+    const map = new Map<string, GarminIngestLogEntry>()
+    for (const e of garminLog.entries) {
+      if (!map.has(e.target_date)) map.set(e.target_date, e)
+    }
+    return map
+  }, [garminLog.entries])
   const [expandedMeal, setExpandedMeal] = useState<number | null>(null)
   const [mealResponses, setMealResponses] = useState<Record<number, MealResponseData>>({})
 
@@ -236,7 +247,32 @@ export default function Logs() {
                             <td className="py-2 pr-4">
                               <TypeBadge kind={ev.kind} />
                             </td>
-                            <td className="py-2 pr-4">{eventDetails(ev)}</td>
+                            <td className="py-2 pr-4">
+                              {eventDetails(ev)}
+                              {ev.kind === 'health' &&
+                                ev.entry.source === 'garmin' &&
+                                (() => {
+                                  const dateKey = ev.entry.timestamp.slice(0, 10)
+                                  const logEntry = garminLogByDate.get(dateKey)
+                                  if (!logEntry) return null
+                                  const isError = [
+                                    'auth_error',
+                                    'rate_limited',
+                                    'connection_error',
+                                    'error',
+                                  ].includes(logEntry.outcome)
+                                  const isPartial = logEntry.outcome === 'partial'
+                                  if (!isError && !isPartial) return null
+                                  return (
+                                    <span
+                                      className={`ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isError ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}`}
+                                      title={logEntry.error_detail ?? logEntry.outcome}
+                                    >
+                                      {logEntry.outcome.replace('_', ' ')}
+                                    </span>
+                                  )
+                                })()}
+                            </td>
                             <td className="py-2">
                               <div className="flex items-center gap-1">
                                 {isMeal && (
