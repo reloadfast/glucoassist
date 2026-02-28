@@ -27,6 +27,7 @@ RUN awk '/Dev \/ Test/{exit} /^[A-Za-z]/{print}' requirements.txt \
 COPY backend/app/ ./app/
 COPY backend/alembic/ ./alembic/
 COPY backend/alembic.ini ./
+COPY backend/pyproject.toml ./
 
 # Utility scripts (e.g. garmin_login.py for one-time token seeding)
 COPY scripts/ /app/scripts/

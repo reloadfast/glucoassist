@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     nightscout_url: str = ""
     nightscout_token: str = ""
 
+    # Push receiver auth — optional; when set, /api/v1/entries requires a
+    # matching API-SECRET header (same value as the uploader's nightscout token)
+    push_secret: str = ""
+
     # Ingest
     ingest_interval_seconds: int = 300
 
