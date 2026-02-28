@@ -167,9 +167,10 @@ export default function Dashboard() {
                     active in your body.
                   </p>
                   <p>
-                    Calculated using a linear decay model over 65 minutes (assumed Duration of
-                    Insulin Action for rapid-acting analogues). This is an approximation — actual
-                    activity depends on insulin type, injection site, and individual physiology.
+                    Calculated using a bilinear (trapezoid) decay model with a 4-hour Duration of
+                    Insulin Action and peak activity at 75 minutes — the standard approximation used
+                    by open-loop systems. This is an approximation — actual activity depends on
+                    insulin type, injection site, and individual physiology.
                   </p>
                   <p>Only doses you have logged in GlucoAssist are included.</p>
                 </HelpPopover>

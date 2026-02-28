@@ -210,10 +210,11 @@ export default function Settings() {
               </HelpSection>
               <HelpSection title="What feeds it">
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>Last 6 glucose readings (30-minute window)</li>
+                  <li>Last 6 glucose readings (25-minute window)</li>
                   <li>Rate of change</li>
                   <li>Time of day and day of week</li>
-                  <li>Insulin on Board (65-min linear decay)</li>
+                  <li>Insulin on Board (4-hour bilinear decay model)</li>
+                  <li>Carbs on Board (2-hour linear absorption from logged meals)</li>
                 </ul>
               </HelpSection>
               <HelpSection title="Model promotion logic">

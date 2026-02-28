@@ -2,8 +2,9 @@
 Glucose forecasting service.
 
 Model: Ridge regression (scikit-learn) per horizon (30, 60, 120 min).
-Features (13): last 6 glucose values + 5-min delta + 10-min delta + avg rate
-               + hour_sin/cos + weekday_sin/cos.
+Features (15): last 6 glucose values (current reading at w[5]) + 5-min delta
+               + 10-min delta + avg rate + hour_sin/cos + weekday_sin/cos
+               + IOB (insulin on board) + COB (carbs on board).
 CI: empirical 80% — predicted ± 1.28 * residual_std from validation residuals.
 Risk: P(hypo < 70) and P(hyper > 250) via normal CDF from math.erfc (stdlib only).
 Storage: joblib files alongside the SQLite DB file.
@@ -27,8 +28,9 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.glucose import GlucoseReading
 from app.models.insulin import InsulinDose
+from app.models.meal import Meal
 from app.schemas.forecast import ForecastResponse, HorizonForecast, ModelMeta
-from app.services.iob import RAPID_DIA_MIN, iob_fraction
+from app.services.iob import COB_DIA_MIN, RAPID_DIA_MIN, cob_fraction, iob_fraction
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ RISK_THRESHOLDS = [  # (upper_exclusive, level)
 ]
 VALIDATION_FRACTION = 0.2
 RANDOM_STATE = 42
-N_FEATURES = 14  # 6 glucose + 3 rate + 2 hour cyclic + 2 weekday cyclic + 1 IOB
+N_FEATURES = 15  # 6 glucose + 3 rate + 2 hour cyclic + 2 weekday cyclic + 1 IOB + 1 COB
 REGISTRY_MAX_ENTRIES = 50
 
 
@@ -147,30 +149,36 @@ def _make_features(
     values: list[float],
     timestamps: list[datetime],
     iob_values: list[float] | None = None,
+    cob_values: list[float] | None = None,
 ) -> np.ndarray:
     """
     Build feature matrix from a chronologically sorted glucose series.
-    Requires at least 7 rows to produce any output.
+    Requires at least 6 rows to produce any output.
     Returns shape (n_samples, N_FEATURES).
 
-    Features per row (all at index i where i >= 6):
-      0-5  : glucose values v[i-5] … v[i]
-      6    : 5-min delta  v[i] - v[i-1]
-      7    : 10-min delta v[i] - v[i-2]
-      8    : avg rate     (v[i] - v[i-5]) / 5
+    Features per row (all at index i where i >= 5):
+      0-5  : glucose values v[i-5] … v[i]   (w[5] = current reading)
+      6    : 5-min delta   v[i] - v[i-1]
+      7    : 10-min delta  v[i] - v[i-2]
+      8    : avg rate      (v[i] - v[i-5]) / 5
       9    : sin(hour_of_day * 2π/24)
       10   : cos(hour_of_day * 2π/24)
       11   : sin(weekday * 2π/7)
       12   : cos(weekday * 2π/7)
       13   : IOB (units of active rapid-acting insulin)
+      14   : COB (grams of active carbohydrates)
+
+    The feature at row i represents the system state at timestamp[i], and the
+    paired target is the glucose value n_steps readings into the future.
     """
     rows = []
-    for i in range(6, len(values)):
-        w = values[i - 6 : i]  # w[0]=oldest, w[5]=current
+    for i in range(5, len(values)):
+        w = values[i - 5 : i + 1]  # w[0]=oldest, w[5]=current reading at index i
         ts = timestamps[i]
         hour_frac = ts.hour + ts.minute / 60.0
         wd = ts.weekday()
         iob = iob_values[i] if iob_values is not None else 0.0
+        cob = cob_values[i] if cob_values is not None else 0.0
         rows.append(
             [
                 w[0],
@@ -181,12 +189,13 @@ def _make_features(
                 w[5],
                 w[5] - w[4],  # 5-min delta
                 w[5] - w[3],  # 10-min delta
-                (w[5] - w[0]) / 5.0,  # avg rate
+                (w[5] - w[0]) / 5.0,  # avg rate over 25 min
                 math.sin(2 * math.pi * hour_frac / 24.0),
                 math.cos(2 * math.pi * hour_frac / 24.0),
                 math.sin(2 * math.pi * wd / 7.0),
                 math.cos(2 * math.pi * wd / 7.0),
                 iob,
+                cob,
             ]
         )
     return np.array(rows, dtype=np.float64)
@@ -194,10 +203,12 @@ def _make_features(
 
 def _make_targets(values: list[float], n_steps: int) -> np.ndarray:
     """
-    Target for feature row i (which uses values[i-6:i] as base) is values[i + n_steps].
-    Feature rows start at index 6; valid target indices end at len(values) - n_steps.
+    Target for feature row i (which uses values[i-5:i+1] as features, current
+    reading at i) is values[i + n_steps] — exactly n_steps × 5 min into the
+    future.  Feature rows start at index 5; valid target indices end at
+    len(values) - 1.  Returns len(values) - 5 - n_steps targets.
     """
-    return np.array(values[6 : len(values) - n_steps], dtype=np.float64)
+    return np.array(values[5 + n_steps : len(values)], dtype=np.float64)
 
 
 # ── Internal model container ───────────────────────────────────────────────────
@@ -268,7 +279,27 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
                 total += d.units * iob_fraction((ts - d_ts).total_seconds() / 60.0)
         iob_values.append(total)
 
-    X_all = _make_features(values, timestamps, iob_values)
+    # Precompute COB (carbs on board) at each glucose timestamp from meal logs.
+    meals = (
+        db.query(Meal.timestamp, Meal.carbs_g)
+        .order_by(Meal.timestamp.asc())
+        .all()
+    )
+    cob_values: list[float] = []
+    for ts in timestamps:
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
+        cutoff = ts - timedelta(minutes=COB_DIA_MIN)
+        total = 0.0
+        for m in meals:
+            m_ts = m.timestamp
+            if m_ts.tzinfo is None:
+                m_ts = m_ts.replace(tzinfo=UTC)
+            if cutoff <= m_ts <= ts:
+                total += m.carbs_g * cob_fraction((ts - m_ts).total_seconds() / 60.0)
+        cob_values.append(total)
+
+    X_all = _make_features(values, timestamps, iob_values, cob_values)
 
     model_dir = _model_dir()
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -470,12 +501,14 @@ def get_forecast(db: Session) -> ForecastResponse:
     timestamps = [r.timestamp for r in rows]
 
     try:
-        from app.services.iob import compute_iob
+        from app.services.iob import compute_cob, compute_iob
 
         iob_now = compute_iob(db)
-        # Use current IOB for all inference rows; only X_all[-1] matters for prediction.
+        cob_now = compute_cob(db)
+        # Use current IOB/COB for all inference rows; only X_all[-1] matters.
         iob_values = [iob_now] * len(values)
-        X_all = _make_features(values, timestamps, iob_values)
+        cob_values = [cob_now] * len(values)
+        X_all = _make_features(values, timestamps, iob_values, cob_values)
         if len(X_all) == 0:
             return ForecastResponse(
                 model_trained=True, forecasts=[], overall_risk="unknown", meta=meta
