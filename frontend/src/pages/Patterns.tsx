@@ -1,5 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { HelpPopover } from '@/components/HelpPopover'
+import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { usePatternHistory } from '@/hooks/usePatternHistory'
@@ -17,7 +19,16 @@ function PatternCard({ pattern }: { pattern: PatternItem }) {
           </Badge>
         </div>
         {pattern.confidence != null && (
-          <CardDescription>Confidence: {Math.round(pattern.confidence * 100)}%</CardDescription>
+          <CardDescription className="flex items-center gap-1">
+            Confidence: {Math.round(pattern.confidence * 100)}%
+            <HelpPopover title="Confidence score">
+              <p>
+                The proportion of qualifying days on which this pattern was observed, weighted
+                toward recent history.
+              </p>
+              <p>Above 70% is considered a well-established pattern.</p>
+            </HelpPopover>
+          </CardDescription>
         )}
       </CardHeader>
       <CardContent>
@@ -64,7 +75,81 @@ export default function Patterns() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Patterns</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Patterns</h1>
+          <HelpSheet title="What are patterns?" variant="link" triggerLabel="What are patterns?">
+            <HelpSection title="What pattern detection does">
+              <p>
+                GlucoAssist analyses your glucose history to find recurring behaviours — times of
+                day or week when your glucose consistently follows a particular trajectory. Patterns
+                are only surfaced when they occur with sufficient frequency and statistical
+                confidence.
+              </p>
+            </HelpSection>
+            <HelpSection title="Pattern types">
+              <table className="w-full text-xs border-collapse mt-1">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left pb-1 font-medium text-foreground">Pattern</th>
+                    <th className="text-left pb-1 font-medium text-foreground">What it means</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-1 pr-3 font-medium text-foreground">
+                      Recurrent overnight low
+                    </td>
+                    <td className="py-1">
+                      Glucose consistently drops below 70 mg/dL during a specific overnight window
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1 pr-3 font-medium text-foreground">Post-meal spike</td>
+                    <td className="py-1">
+                      Glucose rises above 180 mg/dL within 2 hours of logged meals at a consistent
+                      time block
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1 pr-3 font-medium text-foreground">Dawn phenomenon</td>
+                    <td className="py-1">
+                      Glucose rises in early morning (3am–8am) without a corresponding meal or bolus
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-1 pr-3 font-medium text-foreground">Afternoon dip</td>
+                    <td className="py-1">
+                      Consistent glucose falls in mid-afternoon, often correlating with activity or
+                      insulin tail
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-3 font-medium text-foreground">
+                      High variability window
+                    </td>
+                    <td className="py-1">
+                      CV% significantly exceeds your baseline in a particular time block
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </HelpSection>
+            <HelpSection title="Confidence score">
+              <p>
+                Each pattern shows a confidence score (0–100%). This reflects the fraction of
+                qualifying days on which the pattern was observed, weighted by recency. Above 70%
+                indicates a well-established pattern.
+              </p>
+            </HelpSection>
+            <HelpSection title="What to do with patterns">
+              <p>
+                Patterns are decision-support signals. A pattern surfaced here does not mean your
+                settings automatically need adjustment — discuss recurring patterns with your
+                diabetes care team before making treatment changes.
+              </p>
+            </HelpSection>
+          </HelpSheet>
+        </div>
         {items.length > 0 && (
           <Badge variant={detected.length > 0 ? 'destructive' : 'secondary'}>
             {detected.length} of {items.length} detected

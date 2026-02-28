@@ -13,6 +13,8 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { HelpPopover } from '@/components/HelpPopover'
+import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useBasalWindows } from '@/hooks/useBasalWindows'
 import type { BasalWindowBlock } from '@/lib/api'
 
@@ -118,7 +120,53 @@ export default function Basal() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Basal Window Analysis</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Basal Window Analysis</h1>
+          <HelpSheet
+            title="What is this showing?"
+            variant="link"
+            triggerLabel="What is this showing?"
+          >
+            <HelpSection title="What basal rate analysis shows">
+              <p>
+                Basal insulin (background insulin) is intended to keep your glucose stable when you
+                are not eating. This analysis looks at overnight fasting periods — windows with no
+                logged meals and no significant boluses — and shows how your glucose behaved.
+              </p>
+              <p>
+                A well-matched basal produces a flat glucose trace overnight. Consistent rises
+                suggest the basal rate may be too low; consistent falls suggest it may be too high.
+              </p>
+            </HelpSection>
+            <HelpSection title="How to read the chart">
+              <ul className="space-y-1 list-disc list-inside">
+                <li>
+                  <strong>Darker band (IQR: 25th–75th percentile)</strong> — the middle 50% of your
+                  readings
+                </li>
+                <li>
+                  <strong>Lighter outer bands (10th–90th percentile)</strong> — the broader spread,
+                  trimming outliers
+                </li>
+                <li>
+                  <strong>Median line</strong> — your typical glucose at that time
+                </li>
+              </ul>
+            </HelpSection>
+            <HelpSection title="Limitations">
+              <p>
+                GlucoAssist cannot know your actual basal rate setting — it can only observe its
+                effect on glucose. Fasting windows are approximated from the absence of logged
+                meals; unlogged meals will corrupt the analysis. A minimum of 14 days of data is
+                recommended.
+              </p>
+              <p>
+                Decision-support only — always discuss basal adjustments with your diabetes care
+                team before making changes.
+              </p>
+            </HelpSection>
+          </HelpSheet>
+        </div>
         <p className="text-muted-foreground text-sm mt-1">
           Overnight glucose distribution by 2-hour block — last 30 days
           {nightsAnalyzed > 0 && ` (${nightsAnalyzed} nights)`}
@@ -231,8 +279,17 @@ export default function Basal() {
             <CardContent className="px-4 pb-4 text-xs text-muted-foreground space-y-0.5">
               {b.median !== null ? (
                 <>
-                  <p title="Interquartile range: the middle 50% of nights (25th–75th percentile)">
-                    IQR: {fmt(b.p25)}–{fmt(b.p75)}
+                  <p className="flex items-center gap-1">
+                    <span>
+                      IQR: {fmt(b.p25)}–{fmt(b.p75)}
+                    </span>
+                    <HelpPopover title="Interquartile Range (IQR)">
+                      <p>
+                        The range containing the middle 50% of your glucose readings at this time
+                        (25th–75th percentile). A wider IQR means more day-to-day variability at
+                        this hour.
+                      </p>
+                    </HelpPopover>
                   </p>
                   <p>
                     {b.nights} night{b.nights === 1 ? '' : 's'}

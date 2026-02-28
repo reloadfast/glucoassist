@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { HelpPopover } from '@/components/HelpPopover'
+import { HelpPopover, HelpFormula } from '@/components/HelpPopover'
+import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useRatios } from '@/hooks/useRatios'
 import type { TimeBlockRatio } from '@/lib/api'
 
@@ -54,7 +55,58 @@ export default function Intelligence() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Intelligence</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Intelligence</h1>
+        <HelpSheet
+          title="How are these calculated?"
+          variant="link"
+          triggerLabel="How are these calculated?"
+        >
+          <HelpSection title="Insulin-to-Carb Ratio (ICR)">
+            <p>
+              The ICR tells you how many grams of carbohydrates one unit of rapid-acting insulin
+              covers. A ratio of 1:10 means 1 unit covers 10 g of carbs.
+            </p>
+            <p>
+              GlucoAssist estimates your ICR per time block by analysing logged meal + insulin
+              events and the glucose response that followed.
+            </p>
+            <p className="text-xs mt-1">
+              This is an analytical estimate, not a prescription. ICR varies by time of day, meal
+              composition, activity, and individual physiology. Always validate with your diabetes
+              care team.
+            </p>
+          </HelpSection>
+          <HelpSection title="Correction Factor (CF / ISF)">
+            <p>
+              The Correction Factor (also called Insulin Sensitivity Factor) tells you how many
+              mg/dL one unit of rapid-acting insulin will lower your glucose.
+            </p>
+            <p>
+              GlucoAssist estimates CF per time block by analysing correction bolus events (insulin
+              logged without a meal) and the glucose drop that followed over 3–4 hours.
+            </p>
+            <p>Standard cross-check:</p>
+            <HelpFormula>CF ≈ 1800 ÷ Total Daily Dose</HelpFormula>
+          </HelpSection>
+          <HelpSection title="Time blocks">
+            <p>
+              Both ICR and CF are estimated per 4-hour block because insulin sensitivity varies
+              significantly across the day. Blocks with fewer than 5 logged events show "—"
+              (insufficient data).
+            </p>
+          </HelpSection>
+          <HelpSection title="Confidence">
+            <p>
+              The number of events used per block is shown. More events means a more reliable
+              estimate. Treat blocks with fewer than 10 events as preliminary.
+            </p>
+            <p>
+              Decision-support only — always discuss ratio adjustments with your healthcare team.
+            </p>
+          </HelpSection>
+        </HelpSheet>
+      </div>
 
       <Card>
         <CardHeader>
@@ -100,10 +152,14 @@ export default function Intelligence() {
                       <th className="py-2 pl-2 text-left text-muted-foreground font-medium">
                         <HeaderWithHelp label="Status" title="Observation Count">
                           <p>
-                            Shows the number of paired observations used for each estimate. At least
-                            5 paired records are required before an estimate is shown.
+                            Number of logged events used to calculate the estimate for this time
+                            block. At least 5 paired records are required before an estimate is
+                            shown.
                           </p>
-                          <p>Fewer observations are displayed as a count only.</p>
+                          <p>
+                            Fewer than 10 events should be treated as preliminary. Fewer than 5 are
+                            shown as a count only (insufficient data).
+                          </p>
                         </HeaderWithHelp>
                       </th>
                     </tr>

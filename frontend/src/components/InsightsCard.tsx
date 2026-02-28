@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { HelpPopover } from '@/components/HelpPopover'
 import { useRecommendations } from '@/hooks/useRecommendations'
 import type { Recommendation } from '@/lib/api'
 
@@ -73,6 +74,20 @@ function RecommendationRow({ rec }: { rec: Recommendation }) {
   )
 }
 
+const InsightsHelp = (
+  <HelpPopover title="Insights">
+    <p>
+      Pattern-based recommendations generated from your glucose history. Each insight is triggered
+      by a detected pattern (e.g. recurrent overnight lows, post-meal spikes).
+    </p>
+    <p>
+      Insights are informational only. They highlight trends in your data — they do not account for
+      your treatment plan or medical history. Discuss any consistent patterns with your diabetes
+      care team.
+    </p>
+  </HelpPopover>
+)
+
 export default function InsightsCard() {
   const { data, loading } = useRecommendations()
 
@@ -80,7 +95,10 @@ export default function InsightsCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Insights</CardTitle>
+          <CardTitle className="flex items-center gap-1">
+            Insights
+            {InsightsHelp}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <Skeleton className="h-16 w-full" />
@@ -96,7 +114,10 @@ export default function InsightsCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Insights</CardTitle>
+          <CardTitle className="flex items-center gap-1">
+            Insights
+            {InsightsHelp}
+          </CardTitle>
           <CardDescription>Pattern-based recommendations</CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,7 +132,10 @@ export default function InsightsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Insights</CardTitle>
+        <CardTitle className="flex items-center gap-1">
+          Insights
+          {InsightsHelp}
+        </CardTitle>
         <CardDescription>
           {recs.length} recommendation{recs.length === 1 ? '' : 's'} based on {data?.detected_count}{' '}
           detected pattern{data?.detected_count === 1 ? '' : 's'}
