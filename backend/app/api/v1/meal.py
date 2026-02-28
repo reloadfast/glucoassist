@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -46,7 +46,7 @@ def create_meal(payload: MealCreate, db: Session = Depends(get_db)) -> Meal:
 
     # Update use_count and last_used_at for each referenced food item
     if food_ids:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         for fid in food_ids:
             item = db.get(FoodItem, fid)
             if item is not None:
