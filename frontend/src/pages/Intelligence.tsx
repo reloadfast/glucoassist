@@ -105,6 +105,22 @@ export default function Intelligence() {
               Decision-support only — always discuss ratio adjustments with your healthcare team.
             </p>
           </HelpSection>
+          <HelpSection title="What to log to populate estimates">
+            <p>
+              <strong>For ICR</strong> — log a meal (carb amount) and a bolus insulin dose within
+              the same time block. GlucoAssist pairs them when the insulin is logged within 30
+              minutes of the meal and the glucose returns to near-baseline within 4 hours.
+            </p>
+            <p>
+              <strong>For CF</strong> — log a correction bolus (insulin without a concurrent meal)
+              and let GlucoAssist observe the glucose drop over the following 3–4 hours.
+            </p>
+            <p>
+              Each time block (e.g. Morning 06:00–10:00) needs at least 5 qualifying paired events
+              before an estimate appears. Logging consistently for 2–4 weeks across different times
+              of day gives the most complete picture.
+            </p>
+          </HelpSection>
         </HelpSheet>
       </div>
 
@@ -175,7 +191,33 @@ export default function Intelligence() {
             </>
           )}
           {!loading && !error && !ratios && (
-            <p className="text-sm text-muted-foreground">No ratio data available.</p>
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                No ratio estimates yet — not enough paired insulin and meal logs.
+              </p>
+              <div className="rounded-md border bg-muted/40 p-4 space-y-2 text-sm">
+                <p className="font-medium">How to populate estimates</p>
+                <ul className="space-y-1.5 list-disc list-inside text-muted-foreground">
+                  <li>
+                    <strong className="text-foreground">ICR:</strong> log a meal with a carb amount,
+                    then log a bolus insulin dose within the same time block. Repeat across
+                    different times of day.
+                  </li>
+                  <li>
+                    <strong className="text-foreground">CF:</strong> log a correction bolus (insulin
+                    without a meal) and allow 3–4 hours for the glucose drop to be recorded.
+                  </li>
+                  <li>
+                    Each time block needs at least 5 qualifying paired events before an estimate
+                    appears. Logging consistently for 2–4 weeks gives the most complete picture.
+                  </li>
+                </ul>
+                <p className="text-xs text-muted-foreground pt-1">
+                  Use the <strong>Logs</strong> page to add meal and insulin entries. Open{' '}
+                  <em>How are these calculated?</em> above for a full explanation.
+                </p>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
