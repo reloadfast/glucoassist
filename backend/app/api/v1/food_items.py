@@ -1,10 +1,13 @@
 import json
+from collections import Counter
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.food_item import FoodItem
+from app.models.meal import Meal
 from app.schemas.food_item import (
     FoodItemCreate,
     FoodItemListResponse,
@@ -33,6 +36,56 @@ def _serialize(item: FoodItem) -> FoodItemOut:
         last_used_at=item.last_used_at,
         use_count=item.use_count,
     )
+
+
+@router.get("/food-items/suggestions", response_model=FoodItemListResponse)
+def suggest_food_items(
+    hour: int = Query(ge=0, le=23, description="Current hour (0–23) for time-of-day scoring"),
+    db: Session = Depends(get_db),
+) -> FoodItemListResponse:
+    """Return up to 6 food items frequently eaten near the requested hour."""
+    cutoff = datetime.now(tz=UTC) - timedelta(days=90)
+    meals = (
+        db.query(Meal)
+        .filter(Meal.timestamp >= cutoff, Meal.food_item_ids.isnot(None))
+        .all()
+    )
+
+    # Score food_item_ids by meals within ±2 hours of requested hour
+    counts: Counter[int] = Counter()
+    for meal in meals:
+        meal_hour = meal.timestamp.astimezone(UTC).hour
+        diff = min(abs(meal_hour - hour), 24 - abs(meal_hour - hour))
+        if diff <= 2:
+            try:
+                ids: list[int] = json.loads(meal.food_item_ids)  # type: ignore[arg-type]
+                for fid in ids:
+                    counts[fid] += 1
+            except (ValueError, TypeError):
+                pass
+
+    top_ids: list[int]
+    if counts:
+        top_ids = [fid for fid, _ in counts.most_common(6)]
+    else:
+        # Fall back: top foods by overall use_count
+        rows = (
+            db.query(FoodItem)
+            .order_by(FoodItem.use_count.desc(), FoodItem.last_used_at.desc().nullslast())
+            .limit(6)
+            .all()
+        )
+        top_ids = [r.id for r in rows]
+
+    if not top_ids:
+        return FoodItemListResponse(items=[], count=0)
+
+    food_map = {
+        f.id: f
+        for f in db.query(FoodItem).filter(FoodItem.id.in_(top_ids)).all()
+    }
+    ordered = [_serialize(food_map[fid]) for fid in top_ids if fid in food_map]
+    return FoodItemListResponse(items=ordered, count=len(ordered))
 
 
 @router.get("/food-items", response_model=FoodItemListResponse)

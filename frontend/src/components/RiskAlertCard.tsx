@@ -114,8 +114,12 @@ export default function RiskAlertCard({ forecast }: Props) {
                   <strong>Day of week</strong> — weekday vs. weekend lifestyle differences
                 </li>
                 <li>
-                  <strong>Insulin on Board (IOB)</strong> — active rapid insulin (65-min decay
-                  curve)
+                  <strong>Insulin on Board (IOB)</strong> — active rapid insulin (4-hour bilinear
+                  decay model)
+                </li>
+                <li>
+                  <strong>Carbs on Board (COB)</strong> — active carbohydrates from logged meals
+                  (2-hour linear absorption)
                 </li>
               </ul>
             </HelpSection>

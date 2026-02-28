@@ -1,37 +1,16 @@
-import { Pencil, Plus, Search, Trash2, X } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 import { HelpPopover } from '@/components/HelpPopover'
+import LogMealDialog from '@/components/LogMealDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFoodLibrary } from '@/hooks/useFoodLibrary'
-import { createFoodItem, deleteFoodItem, postMeal, updateFoodItem } from '@/lib/api'
+import { createFoodItem, deleteFoodItem, updateFoodItem } from '@/lib/api'
 import type { FoodItem, FoodItemCreate } from '@/lib/api'
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-function computeCarbs(item: FoodItem, portionG: number): number {
-  return Math.round((portionG / 100) * item.carbs_per_100g * 10) / 10
-}
-
-function fuzzyMatch(item: FoodItem, q: string): boolean {
-  const lower = q.toLowerCase()
-  return (
-    item.name.toLowerCase().includes(lower) ||
-    item.aliases.some((a) => a.toLowerCase().includes(lower))
-  )
-}
-
-// ─── Cart item ───────────────────────────────────────────────────────────────
-
-interface CartEntry {
-  food: FoodItem
-  portionG: number
-  carbsG: number
-}
 
 // ─── Food item form (create / edit) ──────────────────────────────────────────
 
@@ -151,244 +130,6 @@ function FoodForm({ initial, onSave, onCancel, saving }: FoodFormProps) {
           Cancel
         </Button>
       </div>
-    </div>
-  )
-}
-
-// ─── Portion entry dialog (inline) ───────────────────────────────────────────
-
-interface PortionPickerProps {
-  food: FoodItem
-  onAdd: (entry: CartEntry) => void
-  onCancel: () => void
-}
-
-function PortionPicker({ food, onAdd, onCancel }: PortionPickerProps) {
-  const [portionG, setPortionG] = useState(food.default_portion_g)
-  const carbs = computeCarbs(food, portionG)
-
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-sm font-medium">{food.name}</span>
-      <Input
-        type="number"
-        min={1}
-        max={2000}
-        step={1}
-        value={portionG}
-        onChange={(e) => setPortionG(parseFloat(e.target.value) || 0)}
-        className="w-20 h-7 text-sm"
-        aria-label="Portion in grams"
-      />
-      <span className="text-sm text-muted-foreground">g → {carbs}g carbs</span>
-      <Button size="sm" className="h-7" onClick={() => onAdd({ food, portionG, carbsG: carbs })}>
-        Add
-      </Button>
-      <Button size="sm" variant="ghost" className="h-7" onClick={onCancel}>
-        <X className="h-3 w-3" />
-      </Button>
-    </div>
-  )
-}
-
-// ─── Quick log panel ─────────────────────────────────────────────────────────
-
-interface QuickLogPanelProps {
-  items: FoodItem[]
-  onMealLogged: () => void
-}
-
-function QuickLogPanel({ items, onMealLogged }: QuickLogPanelProps) {
-  const [query, setQuery] = useState('')
-  const [picking, setPicking] = useState<FoodItem | null>(null)
-  const [cart, setCart] = useState<CartEntry[]>([])
-  const [logging, setLogging] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  const totalCarbs = cart.reduce((s, e) => s + e.carbsG, 0)
-
-  const frequent = useMemo(() => items.filter((i) => i.use_count > 0).slice(0, 5), [items])
-  const recent = useMemo(() => {
-    return [...items]
-      .filter((i) => i.last_used_at != null)
-      .sort((a, b) => (b.last_used_at ?? '').localeCompare(a.last_used_at ?? ''))
-      .slice(0, 5)
-  }, [items])
-
-  const searchResults = useMemo(() => {
-    if (!query.trim()) return []
-    return items.filter((i) => fuzzyMatch(i, query)).slice(0, 10)
-  }, [items, query])
-
-  function selectFood(food: FoodItem) {
-    setQuery('')
-    setPicking(food)
-  }
-
-  function addToCart(entry: CartEntry) {
-    setCart((c) => [...c, entry])
-    setPicking(null)
-    searchRef.current?.focus()
-  }
-
-  function removeFromCart(idx: number) {
-    setCart((c) => c.filter((_, i) => i !== idx))
-  }
-
-  async function confirmMeal() {
-    if (cart.length === 0) return
-    setLogging(true)
-    setMsg(null)
-    try {
-      const label = cart.map((e) => e.food.name).join(', ')
-      await postMeal({
-        timestamp: new Date().toISOString(),
-        carbs_g: Math.round(totalCarbs * 10) / 10,
-        label,
-        food_item_ids: cart.map((e) => e.food.id),
-      })
-      setCart([])
-      setMsg(`Logged: ${label} (${Math.round(totalCarbs * 10) / 10}g carbs)`)
-      onMealLogged()
-    } catch {
-      setMsg('Failed to log meal — check that the backend is reachable.')
-    } finally {
-      setLogging(false)
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input
-          ref={searchRef}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setPicking(null)
-          }}
-          placeholder="Search foods by name or alias…"
-          className="pl-8"
-          aria-label="Search food items"
-        />
-      </div>
-
-      {/* Portion picker */}
-      {picking && (
-        <div className="rounded-md border p-3 bg-muted/40">
-          <PortionPicker food={picking} onAdd={addToCart} onCancel={() => setPicking(null)} />
-        </div>
-      )}
-
-      {/* Search results */}
-      {query.trim() && !picking && (
-        <div className="rounded-md border divide-y">
-          {searchResults.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-3 py-2">No matches.</p>
-          ) : (
-            searchResults.map((item) => (
-              <button
-                key={item.id}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center justify-between"
-                onClick={() => selectFood(item)}
-              >
-                <span>{item.name}</span>
-                <span className="text-muted-foreground">{item.carbs_per_100g}g carbs/100g</span>
-              </button>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Frequent / Recent panels */}
-      {!query.trim() && !picking && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {frequent.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
-                Frequent
-              </p>
-              <div className="rounded-md border divide-y">
-                {frequent.map((item) => (
-                  <button
-                    key={item.id}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center justify-between"
-                    onClick={() => selectFood(item)}
-                  >
-                    <span>{item.name}</span>
-                    <span className="text-muted-foreground text-xs">×{item.use_count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {recent.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
-                Recent
-              </p>
-              <div className="rounded-md border divide-y">
-                {recent.map((item) => (
-                  <button
-                    key={item.id}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center justify-between"
-                    onClick={() => selectFood(item)}
-                  >
-                    <span>{item.name}</span>
-                    <span className="text-muted-foreground">{item.carbs_per_100g}g/100g</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {frequent.length === 0 && recent.length === 0 && items.length > 0 && (
-            <p className="text-sm text-muted-foreground col-span-2">
-              Search above or add foods to your library to get started.
-            </p>
-          )}
-          {items.length === 0 && (
-            <p className="text-sm text-muted-foreground col-span-2">
-              No foods saved yet. Add some in the Library section below.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Cart */}
-      {cart.length > 0 && (
-        <div className="rounded-md border divide-y">
-          {cart.map((entry, idx) => (
-            <div key={idx} className="flex items-center justify-between px-3 py-2 text-sm">
-              <span>
-                {entry.food.name}{' '}
-                <span className="text-muted-foreground">
-                  {entry.portionG}g → {entry.carbsG}g carbs
-                </span>
-              </span>
-              <button
-                aria-label={`Remove ${entry.food.name}`}
-                onClick={() => removeFromCart(idx)}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-          <div className="px-3 py-2 flex items-center justify-between bg-muted/30">
-            <span className="text-sm font-semibold">
-              Total: {Math.round(totalCarbs * 10) / 10}g carbs
-            </span>
-            <Button size="sm" disabled={logging} onClick={() => void confirmMeal()}>
-              {logging ? 'Logging…' : 'Confirm meal'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
     </div>
   )
 }
@@ -545,18 +286,23 @@ export default function Food() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1">
-            Quick Log
-            <HelpPopover title="Quick log">
+            Log Meal
+            <HelpPopover title="Log meal">
               <p>
-                Search your saved foods by name or alias, enter the portion in grams, and add
-                multiple items to a single meal. The carb total is calculated automatically from
-                your carbs-per-100g values. Confirm to log the meal.
+                Search your saved foods by name or alias, pick a portion, and add multiple items to
+                a single meal. The carb total is calculated automatically. You can also enter carbs
+                manually or add insulin taken. New foods can be created inline.
               </p>
             </HelpPopover>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <QuickLogPanel items={items} onMealLogged={refresh} />
+          <div className="flex items-center gap-3">
+            <LogMealDialog onSuccess={refresh} />
+            <p className="text-sm text-muted-foreground">
+              Log a meal using your food library or enter carbs manually.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

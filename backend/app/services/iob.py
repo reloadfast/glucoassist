@@ -1,5 +1,5 @@
 """
-Insulin on Board (IOB) calculation service.
+Insulin on Board (IOB) and Carbs on Board (COB) calculation service.
 
 Uses a bilinear (trapezoid) activity model — the standard approximation used by
 open-source closed-loop systems (Loop, OpenAPS, AndroidAPS).
@@ -25,9 +25,11 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.models.insulin import InsulinDose
+from app.models.meal import Meal
 
 RAPID_DIA_MIN: int = 240  # duration of action in minutes
 RAPID_PEAK_MIN: int = 75  # time to peak activity in minutes
+COB_DIA_MIN: int = 120  # carbohydrate absorption window in minutes (linear model)
 
 
 def iob_fraction(
@@ -65,6 +67,58 @@ def iob_fraction(
         elapsed = rising_area + falling_area
 
     return max(0.0, 1.0 - elapsed / total_area)
+
+
+def cob_fraction(t_min: float, absorption_time: float = COB_DIA_MIN) -> float:
+    """
+    Fraction of ingested carbohydrates still being absorbed *t_min* minutes
+    after eating.  Uses a simple linear decay model.
+
+    Returns a value in [0.0, 1.0]:
+      - 0 minutes after eating → 1.0 (all carbs still active)
+      - absorption_time minutes after eating → 0.0 (fully absorbed)
+    """
+    if t_min <= 0.0:
+        return 1.0
+    if t_min >= absorption_time:
+        return 0.0
+    return 1.0 - t_min / absorption_time
+
+
+def compute_cob(db: Session, at: datetime | None = None) -> float:
+    """
+    Sum of active carbohydrates (g) from meals logged within the last
+    COB_DIA_MIN minutes.  Uses a linear absorption model.
+
+    Parameters
+    ----------
+    db : SQLAlchemy session
+    at : reference timestamp (defaults to now UTC)
+
+    Returns
+    -------
+    float
+        Total active carbohydrates in grams, rounded to 1 decimal place.
+        Returns 0.0 when no meals are present in the active window.
+    """
+    now = at if at is not None else datetime.now(UTC)
+    cutoff = now - timedelta(minutes=COB_DIA_MIN)
+
+    meals = (
+        db.query(Meal)
+        .filter(Meal.timestamp >= cutoff, Meal.timestamp <= now)
+        .all()
+    )
+
+    total = 0.0
+    for meal in meals:
+        meal_ts = meal.timestamp
+        if meal_ts.tzinfo is None:
+            meal_ts = meal_ts.replace(tzinfo=UTC)
+        t_min = (now - meal_ts).total_seconds() / 60.0
+        total += meal.carbs_g * cob_fraction(t_min)
+
+    return round(total, 1)
 
 
 def compute_iob(db: Session, at: datetime | None = None) -> float:
