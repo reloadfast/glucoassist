@@ -13,6 +13,7 @@ import {
 import { HelpPopover } from '@/components/HelpPopover'
 import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useTimezone } from '@/components/TimezoneProvider'
+import { useAppVersion } from '@/hooks/useAppVersion'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
 import { getGarminStatus, postRetrain } from '@/lib/api'
 import type { GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
@@ -36,6 +37,7 @@ function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
 export default function Settings() {
   const { meta, retrainLog, loading, refresh } = useModelRegistry()
   const { tz, setTz } = useTimezone()
+  const version = useAppVersion()
   const [retraining, setRetraining] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [garminStatus, setGarminStatus] = useState<GarminStatusResponse | null>(null)
@@ -279,6 +281,15 @@ export default function Settings() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>System</CardTitle>
+          <CardDescription>Build information for support and bug reports</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm font-mono">{version === '…' ? 'Loading…' : `v${version}`}</p>
         </CardContent>
       </Card>
     </div>

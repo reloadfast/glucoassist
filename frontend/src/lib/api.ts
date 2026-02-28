@@ -166,6 +166,18 @@ export function getForecast(): Promise<ForecastResponse> {
   return apiFetch<ForecastResponse>('/forecast')
 }
 
+export interface AppVersionResponse {
+  status: string
+  version: string
+  environment: string
+}
+
+export function getAppVersion(): Promise<AppVersionResponse> {
+  return fetch('/api/health')
+    .then((r) => r.json() as Promise<AppVersionResponse>)
+    .catch(() => ({ status: 'error', version: 'dev', environment: 'unknown' }))
+}
+
 export function postInsulin(data: InsulinDoseCreate): Promise<unknown> {
   return apiFetch('/insulin', { method: 'POST', body: JSON.stringify(data) })
 }
