@@ -49,6 +49,9 @@ RUN chmod +x /entrypoint.sh
 # Data directory for SQLite volume mount
 RUN mkdir -p /data && chmod 700 /data
 
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 EXPOSE 80
 
 ENTRYPOINT ["/entrypoint.sh"]

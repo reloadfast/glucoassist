@@ -1,4 +1,4 @@
-import { Check, Menu, Monitor, Moon, Sun, X } from 'lucide-react'
+import { Menu, Monitor, Moon, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
@@ -27,10 +27,28 @@ function VersionChip({ version }: { version: string }) {
   const [copied, setCopied] = useState(false)
 
   function handleCopy() {
-    void navigator.clipboard.writeText(`v${version}`).then(() => {
+    const text = `v${version}`
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(text).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      })
+    } else {
+      // Fallback for non-HTTPS (self-hosted HTTP)
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.cssText = 'position:fixed;opacity:0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      try {
+        document.execCommand('copy')
+      } finally {
+        document.body.removeChild(ta)
+      }
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    })
+    }
   }
 
   return (
@@ -39,14 +57,7 @@ function VersionChip({ version }: { version: string }) {
       aria-label={`App version v${version} — click to copy`}
       className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors flex items-center gap-0.5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-sm"
     >
-      {copied ? (
-        <>
-          <Check className="h-3 w-3 text-green-500" />
-          <span className="text-green-500">✓</span>
-        </>
-      ) : (
-        `v${version}`
-      )}
+      {copied ? <span className="text-green-500">✓</span> : `v${version}`}
     </button>
   )
 }

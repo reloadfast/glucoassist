@@ -1,3 +1,4 @@
+import os
 import tomllib
 from pathlib import Path
 
@@ -12,6 +13,10 @@ _PYPROJECT = Path(__file__).parent.parent.parent / "pyproject.toml"
 
 
 def _read_version() -> str:
+    # Docker build injects APP_VERSION=<7-char SHA>; read it first
+    env_ver = os.getenv("APP_VERSION", "").strip()
+    if env_ver and env_ver != "dev":
+        return env_ver
     try:
         with _PYPROJECT.open("rb") as f:
             return tomllib.load(f)["project"]["version"]
