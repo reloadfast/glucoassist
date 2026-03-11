@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,10 +11,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useAutoresearcher } from '@/hooks/useAutoresearcher'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { formatTs } from '@/lib/formatters'
+import { getProgramMd, saveProgramMd, resetProgramMd } from '@/lib/api'
 
 function StatusBadge({ state }: { state: string }) {
   if (state === 'running') {
@@ -44,6 +46,41 @@ export default function Research() {
   const { tz } = useTimezone()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [nExperiments, setNExperiments] = useState(10)
+
+  const [programContent, setProgramContent] = useState('')
+  const [programIsCustom, setProgramIsCustom] = useState(false)
+  const [programSaving, setProgramSaving] = useState(false)
+  const [programSaved, setProgramSaved] = useState(false)
+  const [programDirty, setProgramDirty] = useState(false)
+
+  useEffect(() => {
+    getProgramMd()
+      .then((r) => {
+        setProgramContent(r.content)
+        setProgramIsCustom(r.is_custom)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSaveProgram() {
+    setProgramSaving(true)
+    try {
+      const r = await saveProgramMd(programContent)
+      setProgramIsCustom(r.is_custom)
+      setProgramDirty(false)
+      setProgramSaved(true)
+      setTimeout(() => setProgramSaved(false), 2500)
+    } finally {
+      setProgramSaving(false)
+    }
+  }
+
+  async function handleResetProgram() {
+    const r = await resetProgramMd()
+    setProgramContent(r.content)
+    setProgramIsCustom(r.is_custom)
+    setProgramDirty(false)
+  }
 
   const isRunning = status?.state === 'running'
   const progress = status?.progress ?? 0
@@ -225,6 +262,49 @@ export default function Research() {
       </Card>
 
       {/* Run dialog */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Research Program</CardTitle>
+              <CardDescription>
+                {programIsCustom ? 'Custom program — edited in app' : 'Default bundled program'}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {programIsCustom && (
+                <Button variant="outline" size="sm" onClick={() => void handleResetProgram()}>
+                  Reset to default
+                </Button>
+              )}
+              <Button
+                size="sm"
+                disabled={!programDirty || programSaving}
+                onClick={() => void handleSaveProgram()}
+              >
+                {programSaved ? '✓ Saved' : programSaving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={programContent}
+            onChange={(e) => {
+              setProgramContent(e.target.value)
+              setProgramDirty(true)
+              setProgramSaved(false)
+            }}
+            className="min-h-[320px] font-mono text-xs"
+            spellCheck={false}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            This is the research program sent to the LLM before each experiment. Edit to adjust
+            baselines, experiment ladder, or clinical priorities. Changes apply to the next run.
+          </p>
+        </CardContent>
+      </Card>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
