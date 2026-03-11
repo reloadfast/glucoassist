@@ -17,13 +17,12 @@ import statistics
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
-from app.schemas.ratios import DoseProposalResponse
-
 from sqlalchemy.orm import Session
 
 from app.models.glucose import GlucoseReading
 from app.models.insulin import InsulinDose
 from app.models.meal import Meal
+from app.schemas.ratios import DoseProposalResponse
 
 MIN_SAMPLES = 5  # minimum paired observations per block before surfacing estimate
 MEAL_WINDOW_MIN = 30  # ±minutes to associate a rapid dose with a meal
