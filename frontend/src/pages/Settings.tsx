@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -18,6 +19,7 @@ import type { ThemeMode } from '@/components/ThemeProvider'
 import { useTimezone } from '@/components/TimezoneProvider'
 import { useAppVersion } from '@/hooks/useAppVersion'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
+import { useAppSettings } from '@/hooks/useAppSettings'
 import { getGarminStatus, postRetrain } from '@/lib/api'
 import type { GarminIngestLogEntry, GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
 import { useGarminIngestLog } from '@/hooks/useGarminIngestLog'
@@ -229,12 +231,37 @@ export default function Settings() {
   const [msg, setMsg] = useState<string | null>(null)
   const [garminStatus, setGarminStatus] = useState<GarminStatusResponse | null>(null)
   const garminLog = useGarminIngestLog(20)
+  const {
+    settings: appSettings,
+    loading: settingsLoading,
+    saving: settingsSaving,
+    load: loadSettings,
+    save: saveSetting,
+  } = useAppSettings()
+
+  // Local editable state for autoresearcher settings
+  const [arEnabled, setArEnabled] = useState(false)
+  const [arOllamaUrl, setArOllamaUrl] = useState('http://localhost:11434')
+  const [arOllamaModel, setArOllamaModel] = useState('llama3.1:8b')
+  const [arSaveMsg, setArSaveMsg] = useState<string | null>(null)
 
   useEffect(() => {
     getGarminStatus()
       .then(setGarminStatus)
       .catch(() => {})
-  }, [])
+    void loadSettings()
+  }, [loadSettings])
+
+  // Sync local AR state when settings load
+  useEffect(() => {
+    if (appSettings) {
+      setArEnabled(appSettings['autoresearcher_enabled'] === 'true')
+      if (appSettings['autoresearcher_ollama_url'])
+        setArOllamaUrl(appSettings['autoresearcher_ollama_url'])
+      if (appSettings['autoresearcher_ollama_model'])
+        setArOllamaModel(appSettings['autoresearcher_ollama_model'])
+    }
+  }, [appSettings])
 
   async function handleRetrain() {
     setRetraining(true)
@@ -246,6 +273,18 @@ export default function Settings() {
       setMsg('Failed to trigger retrain — check that the backend is reachable.')
     } finally {
       setRetraining(false)
+    }
+  }
+
+  async function handleArSave() {
+    setArSaveMsg(null)
+    try {
+      await saveSetting('autoresearcher_enabled', arEnabled ? 'true' : 'false')
+      await saveSetting('autoresearcher_ollama_url', arOllamaUrl)
+      await saveSetting('autoresearcher_ollama_model', arOllamaModel)
+      setArSaveMsg('Settings saved.')
+    } catch {
+      setArSaveMsg('Failed to save — check that the backend is reachable.')
     }
   }
 
@@ -495,6 +534,81 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-1.5">
+            Autoresearcher
+            <HelpPopover>
+              <p>
+                The Autoresearcher autonomously proposes, evaluates, and promotes improvements to
+                the glucose forecasting model using a locally-hosted LLM (Ollama). Each experiment
+                tries a different algorithm or feature set, measured with walk-forward
+                cross-validation against your CGM history. Only models that improve <em>all</em>{' '}
+                forecast horizons are promoted.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Requires Ollama to be running when triggered. Runs are always ad-hoc — use the
+                Research page to start a run.
+              </p>
+            </HelpPopover>
+          </CardTitle>
+          <CardDescription>
+            Autonomous model improvement via a self-hosted LLM. Runs on demand — Ollama need not be
+            running continuously.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {settingsLoading ? (
+            <Skeleton className="h-8 w-48" />
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={arEnabled}
+                    onChange={(e) => setArEnabled(e.target.checked)}
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-muted transition-colors peer-checked:bg-primary after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-4" />
+                  <span className="ml-2 text-sm">Enable Autoresearcher</span>
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Ollama URL
+                  </label>
+                  <Input
+                    value={arOllamaUrl}
+                    onChange={(e) => setArOllamaUrl(e.target.value)}
+                    disabled={!arEnabled}
+                    placeholder="http://localhost:11434"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Model
+                  </label>
+                  <Input
+                    value={arOllamaModel}
+                    onChange={(e) => setArOllamaModel(e.target.value)}
+                    disabled={!arEnabled}
+                    placeholder="llama3.1:8b"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button size="sm" onClick={() => void handleArSave()} disabled={settingsSaving}>
+                  {settingsSaving ? 'Saving…' : 'Save'}
+                </Button>
+                {arSaveMsg && <span className="text-xs text-muted-foreground">{arSaveMsg}</span>}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>System</CardTitle>

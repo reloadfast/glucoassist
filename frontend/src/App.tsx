@@ -12,6 +12,7 @@ const Basal = lazy(() => import('@/pages/Basal'))
 const Food = lazy(() => import('@/pages/Food'))
 const Logs = lazy(() => import('@/pages/Logs'))
 const Settings = lazy(() => import('@/pages/Settings'))
+const Research = lazy(() => import('@/pages/Research'))
 
 function PageLoader() {
   return (
@@ -88,6 +89,14 @@ export default function App() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <Settings />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/research"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <Research />
               </Suspense>
             }
           />

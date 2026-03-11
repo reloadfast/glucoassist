@@ -1,3 +1,5 @@
+from app.models.app_setting import AppSetting
+from app.models.autoresearcher_log import AutoresearcherLog
 from app.models.food_item import FoodItem
 from app.models.garmin_ingest_log import GarminIngestLog
 from app.models.glucose import GlucoseReading
@@ -8,6 +10,8 @@ from app.models.pattern_history import PatternHistory
 from app.models.retrain_log import RetrainLog
 
 __all__ = [
+    "AppSetting",
+    "AutoresearcherLog",
     "FoodItem",
     "GarminIngestLog",
     "GlucoseReading",

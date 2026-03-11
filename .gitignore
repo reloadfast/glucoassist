@@ -84,3 +84,5 @@ logs/
 trp/
 trp_logs/
 frontend/coverage/
+
+autoresearcher/

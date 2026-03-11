@@ -14,6 +14,7 @@ const navItems = [
   { to: '/basal', label: 'Basal' },
   { to: '/food', label: 'Food' },
   { to: '/logs', label: 'Logs' },
+  { to: '/research', label: 'Research' },
   { to: '/settings', label: 'Settings' },
 ]
 

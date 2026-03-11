@@ -559,3 +559,71 @@ export interface GarminIngestLogResponse {
 export function getGarminIngestLog(limit = 30): Promise<GarminIngestLogResponse> {
   return apiFetch<GarminIngestLogResponse>(`/garmin/ingest-log?limit=${limit}`)
 }
+
+// ── App Settings ──────────────────────────────────────────────────────────────
+
+export type AppSettings = Record<string, string>
+
+export function getAppSettings(): Promise<AppSettings> {
+  return apiFetch<AppSettings>('/app-settings')
+}
+
+export function putAppSetting(key: string, value: string): Promise<{ key: string; value: string }> {
+  return apiFetch<{ key: string; value: string }>(`/app-settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  })
+}
+
+// ── Autoresearcher ────────────────────────────────────────────────────────────
+
+export interface AutoresearcherStatus {
+  state: 'idle' | 'running' | 'error'
+  run_id: string
+  progress: number
+  total: number
+  error_message: string
+}
+
+export interface AutoresearcherLogEntry {
+  id: number
+  run_id: string
+  experiment_id: number
+  timestamp: string
+  description: string
+  mae_30: number | null
+  mae_60: number | null
+  mae_90: number | null
+  mae_120: number | null
+  promoted: boolean
+  elapsed_s: number | null
+  feature_config: string | null
+  model_config: string | null
+  notes: string | null
+}
+
+export function getAutoresearcherStatus(): Promise<AutoresearcherStatus> {
+  return apiFetch<AutoresearcherStatus>('/autoresearcher/status')
+}
+
+export function postAutoresearcherRun(
+  nExperiments = 10,
+): Promise<{ run_id: string; message: string }> {
+  return apiFetch<{ run_id: string; message: string }>('/autoresearcher/run', {
+    method: 'POST',
+    body: JSON.stringify({ n_experiments: nExperiments }),
+  })
+}
+
+export function deleteAutoresearcherRun(): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/autoresearcher/run', { method: 'DELETE' })
+}
+
+export function getAutoresearcherLog(
+  limit = 50,
+  runId?: string,
+): Promise<AutoresearcherLogEntry[]> {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (runId) params.set('run_id', runId)
+  return apiFetch<AutoresearcherLogEntry[]>(`/autoresearcher/log?${params}`)
+}
