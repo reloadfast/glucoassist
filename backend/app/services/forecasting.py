@@ -351,7 +351,7 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
 
     current_maes = _current_mae()
     promoted = _should_promote(current_maes, candidate_maes)
-    trained_at = datetime.now(UTC).isoformat()
+    trained_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
     if promoted:
         for horizon_min in HORIZONS:

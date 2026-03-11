@@ -25,7 +25,8 @@ export function formatTrend(trend: string | null | undefined): string {
  */
 export function formatTs(iso: string, tz: string): string {
   // Treat timezone-naïve strings as UTC so "12:41" → 13:41 in CET.
-  const utcIso = /[-Z+]\d*$/.test(iso.slice(10)) ? iso : iso + 'Z'
+  // Also handles +00:00 / +HH:MM offsets already present in the string.
+  const utcIso = /Z|[+-]\d{2}/.test(iso.slice(10)) ? iso : iso + 'Z'
   const d = new Date(utcIso)
 
   const dateParts = new Intl.DateTimeFormat('en', {

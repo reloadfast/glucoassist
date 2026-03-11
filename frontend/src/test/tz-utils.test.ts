@@ -111,6 +111,13 @@ describe('formatTs', () => {
     const result = formatTs('2026-03-11T12:41:00', 'Europe/Madrid')
     expect(result).toMatch(/^11 Mar 13:41 /)
   })
+
+  it('handles +00:00 offset format without appending extra Z', () => {
+    // "2026-02-27T02:24:19.881879+00:00" (from forecasting service stored JSON)
+    // must not produce an invalid date
+    const result = formatTs('2026-02-27T02:24:19.881879+00:00', 'Europe/Madrid')
+    expect(result).toMatch(/^27 Feb 03:24 /)
+  })
 })
 
 describe('tzAbbr', () => {
