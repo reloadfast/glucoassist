@@ -20,7 +20,7 @@ import { useTimezone } from '@/components/TimezoneProvider'
 import { useAppVersion } from '@/hooks/useAppVersion'
 import { useModelRegistry } from '@/hooks/useModelRegistry'
 import { useAppSettings } from '@/hooks/useAppSettings'
-import { getGarminStatus, postRetrain } from '@/lib/api'
+import { getGarminStatus, listOllamaModels, pingOllama, postRetrain } from '@/lib/api'
 import type { GarminIngestLogEntry, GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
 import { useGarminIngestLog } from '@/hooks/useGarminIngestLog'
 import { formatTs } from '@/lib/formatters'
@@ -244,6 +244,10 @@ export default function Settings() {
   const [arOllamaUrl, setArOllamaUrl] = useState('http://localhost:11434')
   const [arOllamaModel, setArOllamaModel] = useState('llama3.1:8b')
   const [arSaveMsg, setArSaveMsg] = useState<string | null>(null)
+  const [arConnecting, setArConnecting] = useState(false)
+  const [arConnectStatus, setArConnectStatus] = useState<'ok' | 'error' | null>(null)
+  const [arConnectMsg, setArConnectMsg] = useState<string | null>(null)
+  const [arAvailableModels, setArAvailableModels] = useState<string[]>([])
 
   useEffect(() => {
     getGarminStatus()
@@ -285,6 +289,41 @@ export default function Settings() {
       setArSaveMsg('Settings saved.')
     } catch {
       setArSaveMsg('Failed to save — check that the backend is reachable.')
+    }
+  }
+
+  async function handleArConnect() {
+    setArConnecting(true)
+    setArConnectStatus(null)
+    setArConnectMsg(null)
+    try {
+      const ping = await pingOllama()
+      if (!ping.reachable) {
+        setArConnectStatus('error')
+        setArConnectMsg(ping.error ?? 'Unreachable')
+        return
+      }
+      setArConnectMsg(`Ollama ${ping.version ?? ''}`)
+      try {
+        const { models } = await listOllamaModels()
+        setArAvailableModels(models)
+        setArConnectStatus('ok')
+        setArConnectMsg(
+          `Connected — ${models.length} model${models.length !== 1 ? 's' : ''} available`,
+        )
+        // Auto-select current model if not in list
+        if (models.length > 0 && !models.includes(arOllamaModel)) {
+          setArOllamaModel(models[0])
+        }
+      } catch {
+        setArConnectStatus('ok')
+        setArConnectMsg('Reachable — could not list models')
+      }
+    } catch {
+      setArConnectStatus('error')
+      setArConnectMsg('Connection failed')
+    } finally {
+      setArConnecting(false)
     }
   }
 
@@ -579,23 +618,64 @@ export default function Settings() {
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Ollama URL
                   </label>
-                  <Input
-                    value={arOllamaUrl}
-                    onChange={(e) => setArOllamaUrl(e.target.value)}
-                    disabled={!arEnabled}
-                    placeholder="http://localhost:11434"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={arOllamaUrl}
+                      onChange={(e) => {
+                        setArOllamaUrl(e.target.value)
+                        setArConnectStatus(null)
+                        setArAvailableModels([])
+                      }}
+                      disabled={!arEnabled}
+                      placeholder="http://localhost:11434"
+                      className="flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void handleArConnect()}
+                      disabled={!arEnabled || arConnecting}
+                    >
+                      {arConnecting ? '…' : 'Test'}
+                    </Button>
+                  </div>
+                  {arConnectStatus && (
+                    <p
+                      className={`text-xs ${arConnectStatus === 'ok' ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
+                    >
+                      {arConnectStatus === 'ok' ? '✓' : '✗'} {arConnectMsg}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Model
                   </label>
-                  <Input
-                    value={arOllamaModel}
-                    onChange={(e) => setArOllamaModel(e.target.value)}
-                    disabled={!arEnabled}
-                    placeholder="llama3.1:8b"
-                  />
+                  {arAvailableModels.length > 0 ? (
+                    <Select
+                      value={arOllamaModel}
+                      onValueChange={setArOllamaModel}
+                      disabled={!arEnabled}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {arAvailableModels.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={arOllamaModel}
+                      onChange={(e) => setArOllamaModel(e.target.value)}
+                      disabled={!arEnabled}
+                      placeholder="llama3.1:8b"
+                    />
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">

@@ -627,3 +627,21 @@ export function getAutoresearcherLog(
   if (runId) params.set('run_id', runId)
   return apiFetch<AutoresearcherLogEntry[]>(`/autoresearcher/log?${params}`)
 }
+
+export interface OllamaPingResponse {
+  reachable: boolean
+  version?: string
+  error?: string
+}
+
+export interface OllamaModelsResponse {
+  models: string[]
+}
+
+export function pingOllama(): Promise<OllamaPingResponse> {
+  return apiFetch<OllamaPingResponse>('/autoresearcher/ollama/ping')
+}
+
+export function listOllamaModels(): Promise<OllamaModelsResponse> {
+  return apiFetch<OllamaModelsResponse>('/autoresearcher/ollama/models')
+}
