@@ -133,7 +133,7 @@ export default function ForecastActionPanel({ forecast, loading = false }: Props
 
   if (!forecast) return null
 
-  const { forecasts, suggestions, model_trained } = forecast
+  const { forecasts, suggestions = [], model_trained } = forecast
 
   return (
     <Card>

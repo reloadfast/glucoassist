@@ -169,7 +169,7 @@ export interface ForecastResponse {
   forecasts: HorizonForecast[]
   overall_risk: 'low' | 'moderate' | 'high' | 'critical' | 'unknown'
   meta: ModelMeta
-  suggestions: ActionSuggestion[]
+  suggestions?: ActionSuggestion[]
 }
 
 export function getForecast(): Promise<ForecastResponse> {
