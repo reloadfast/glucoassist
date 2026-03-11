@@ -134,8 +134,12 @@ def _should_promote(
     current_maes: dict[str, float] | None,
     candidate_maes: dict[str, float],
 ) -> bool:
-    """Promote when no current model exists, or candidate mean MAE is strictly better."""
-    if current_maes is None:
+    """Promote when no current model exists, or candidate mean MAE is strictly better.
+
+    Also force-promotes when the live model files are missing even if the meta JSON
+    records a previous MAE (e.g. after a container rebuild that lost the joblib files).
+    """
+    if current_maes is None or not models_exist():
         return True
     current_mean = sum(current_maes.values()) / len(current_maes)
     candidate_mean = sum(candidate_maes.values()) / len(candidate_maes)

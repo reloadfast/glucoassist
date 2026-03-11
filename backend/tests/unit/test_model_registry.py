@@ -37,23 +37,35 @@ def test_promote_when_no_current_model():
 
 
 @pytest.mark.unit
-def test_promote_when_candidate_better():
+def test_promote_when_candidate_better(monkeypatch):
+    monkeypatch.setattr("app.services.forecasting.models_exist", lambda: True)
     current = {"h30": 15.0, "h60": 18.0, "h120": 22.0}
     candidate = {"h30": 10.0, "h60": 12.0, "h120": 15.0}
     assert _should_promote(current, candidate) is True
 
 
 @pytest.mark.unit
-def test_no_promote_when_candidate_worse():
+def test_no_promote_when_candidate_worse(monkeypatch):
+    monkeypatch.setattr("app.services.forecasting.models_exist", lambda: True)
     current = {"h30": 8.0, "h60": 10.0, "h120": 12.0}
     candidate = {"h30": 15.0, "h60": 18.0, "h120": 22.0}
     assert _should_promote(current, candidate) is False
 
 
 @pytest.mark.unit
-def test_no_promote_when_equal():
+def test_no_promote_when_equal(monkeypatch):
+    monkeypatch.setattr("app.services.forecasting.models_exist", lambda: True)
     maes = {"h30": 10.0, "h60": 12.0, "h120": 15.0}
     assert _should_promote(maes, maes) is False
+
+
+@pytest.mark.unit
+def test_promote_when_files_missing_despite_meta(monkeypatch):
+    """Force-promote when model files are gone even if meta records a good MAE."""
+    monkeypatch.setattr("app.services.forecasting.models_exist", lambda: False)
+    current = {"h30": 6.73, "h60": 6.73, "h120": 6.74}
+    candidate = {"h30": 24.81, "h60": 25.18, "h120": 27.73}
+    assert _should_promote(current, candidate) is True
 
 
 # ── Registry helpers ───────────────────────────────────────────────────────────
