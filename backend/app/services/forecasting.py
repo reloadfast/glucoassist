@@ -388,7 +388,8 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
         joblib.dump(hm, _candidate_model_path(horizon_min))
         candidate_maes[f"h{horizon_min}"] = round(mae, 2)
         logger.info(
-            "Forecasting: trained candidate h%d  MAE=%.2f (walk-forward CV, %d folds)  residual_std=%.2f",
+            "Forecasting: trained candidate h%d  MAE=%.2f"
+            " (walk-forward CV, %d folds)  residual_std=%.2f",
             horizon_min,
             mae,
             len(fold_maes),
