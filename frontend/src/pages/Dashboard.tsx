@@ -1,3 +1,4 @@
+import { differenceInMinutes, format } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -53,6 +54,11 @@ export default function Dashboard() {
   const glucoseDisplay = latest ? `${latest.glucose_mg_dl} mg/dL` : '— mg/dL'
   const tirDisplay = summary?.time_in_range_pct != null ? `${summary.time_in_range_pct}%` : '— %'
   const isEmpty = !loading && summary?.reading_count === 0 && !latest
+
+  const latestTs = latest?.timestamp ? new Date(latest.timestamp) : null
+  const readingAgeMin = latestTs ? differenceInMinutes(new Date(), latestTs) : null
+  const readingTimeLabel = latestTs ? format(latestTs, 'HH:mm') + ' CET' : null
+  const isStale = readingAgeMin != null && readingAgeMin > 15
 
   async function handleBackfill(days: number) {
     setBackfilling(true)
@@ -158,6 +164,14 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">
               {latest ? `Source: ${latest.source}` : 'No data yet'}
             </p>
+            {readingTimeLabel && (
+              <p
+                className={`text-sm mt-1 ${isStale ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}
+              >
+                {readingTimeLabel}
+                {isStale && ` · Reading ${readingAgeMin}m old — sensor may be delayed`}
+              </p>
+            )}
             {summary?.iob_units != null && (
               <p className="text-sm text-muted-foreground mt-1 inline-flex items-center gap-1">
                 {summary.iob_units}u active insulin
@@ -283,7 +297,7 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Glucose Chart</CardTitle>
-          <CardDescription>Last 24 hours</CardDescription>
+          <CardDescription>Last 3 hours + 2-hour forecast</CardDescription>
         </CardHeader>
         <CardContent>
           <GlucoseChart

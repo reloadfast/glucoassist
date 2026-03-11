@@ -1,4 +1,4 @@
-import { addMinutes, format } from 'date-fns'
+import { addMinutes, format, subHours } from 'date-fns'
 import {
   Area,
   CartesianGrid,
@@ -33,9 +33,16 @@ interface Props {
   readings: GlucoseReading[]
   forecasts?: HorizonForecast[]
   eventMarkers?: EventMarker[]
+  /** How many hours of history to show left of the current reading (default: 3) */
+  historyHours?: number
 }
 
-export default function GlucoseChart({ readings, forecasts = [], eventMarkers = [] }: Props) {
+export default function GlucoseChart({
+  readings,
+  forecasts = [],
+  eventMarkers = [],
+  historyHours = 3,
+}: Props) {
   if (readings.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
@@ -44,9 +51,13 @@ export default function GlucoseChart({ readings, forecasts = [], eventMarkers = 
     )
   }
 
-  const sorted = [...readings].sort(
+  const allSorted = [...readings].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   )
+  const cutoff = subHours(new Date(), historyHours)
+  const windowed = allSorted.filter((r) => new Date(r.timestamp) >= cutoff)
+  // Fall back to all available readings if the window contains none (e.g. stale/test data)
+  const sorted = windowed.length > 0 ? windowed : allSorted
 
   const historicalPoints: ChartPoint[] = sorted.map((r) => ({
     time: format(new Date(r.timestamp), 'HH:mm'),
