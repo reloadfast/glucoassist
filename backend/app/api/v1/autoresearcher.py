@@ -1,3 +1,4 @@
+import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -104,3 +105,31 @@ def get_log(
         }
         for r in reversed(rows)
     ]
+
+
+@router.get("/ollama/ping")
+def ping_ollama(db: Session = Depends(get_db)) -> dict:
+    """Test whether the configured Ollama server is reachable."""
+    ollama_url = _get_setting(db, "autoresearcher_ollama_url")
+    try:
+        r = http_requests.get(f"{ollama_url}/api/version", timeout=5)
+        r.raise_for_status()
+        version = r.json().get("version", "unknown")
+        return {"reachable": True, "version": version}
+    except Exception as exc:  # noqa: BLE001 — surface all connection errors to client
+        return {"reachable": False, "error": str(exc)}
+
+
+@router.get("/ollama/models")
+def list_ollama_models(db: Session = Depends(get_db)) -> dict:
+    """Return the list of models installed on the configured Ollama server."""
+    ollama_url = _get_setting(db, "autoresearcher_ollama_url")
+    try:
+        r = http_requests.get(f"{ollama_url}/api/tags", timeout=5)
+        r.raise_for_status()
+        models = [m["name"] for m in r.json().get("models", [])]
+        return {"models": models}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=502, detail=f"Cannot reach Ollama at {ollama_url}: {exc}"
+        ) from exc

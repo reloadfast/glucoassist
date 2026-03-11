@@ -2,6 +2,7 @@
 
 import pytest
 from httpx import AsyncClient
+from unittest.mock import patch, MagicMock
 
 from app.services import autoresearcher as ar_service
 
@@ -49,3 +50,50 @@ class TestAutoresearcherAPI:
     async def test_log_limit_parameter(self, client: AsyncClient):
         resp = await client.get("/api/v1/autoresearcher/log?limit=5")
         assert resp.status_code == 200
+
+    async def test_ping_ollama_reachable(self, client: AsyncClient):
+        """GET /ollama/ping returns reachable=True when Ollama responds."""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = {"version": "0.3.0"}
+        with patch("app.api.v1.autoresearcher.http_requests.get", return_value=mock_resp):
+            resp = await client.get("/api/v1/autoresearcher/ollama/ping")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reachable"] is True
+        assert data["version"] == "0.3.0"
+
+    async def test_ping_ollama_unreachable(self, client: AsyncClient):
+        """GET /ollama/ping returns reachable=False on connection error."""
+        import requests as req
+        with patch(
+            "app.api.v1.autoresearcher.http_requests.get",
+            side_effect=req.exceptions.ConnectionError("refused"),
+        ):
+            resp = await client.get("/api/v1/autoresearcher/ollama/ping")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reachable"] is False
+        assert "error" in data
+
+    async def test_list_ollama_models_success(self, client: AsyncClient):
+        """GET /ollama/models returns model names list."""
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = {
+            "models": [{"name": "llama3.1:8b"}, {"name": "mistral:7b"}]
+        }
+        with patch("app.api.v1.autoresearcher.http_requests.get", return_value=mock_resp):
+            resp = await client.get("/api/v1/autoresearcher/ollama/models")
+        assert resp.status_code == 200
+        assert resp.json()["models"] == ["llama3.1:8b", "mistral:7b"]
+
+    async def test_list_ollama_models_unreachable_returns_502(self, client: AsyncClient):
+        """GET /ollama/models returns 502 when Ollama is down."""
+        import requests as req
+        with patch(
+            "app.api.v1.autoresearcher.http_requests.get",
+            side_effect=req.exceptions.ConnectionError("refused"),
+        ):
+            resp = await client.get("/api/v1/autoresearcher/ollama/models")
+        assert resp.status_code == 502
