@@ -15,6 +15,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        nginx \
        supervisor \
+       libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Python runtime deps only (stop before the Dev/Test section)
