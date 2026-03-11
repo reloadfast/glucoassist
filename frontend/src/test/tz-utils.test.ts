@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toUtcISO, isoToLocalInput, localNow } from '@/lib/tz-utils'
+import { toUtcISO, isoToLocalInput, localNow, tzAbbr } from '@/lib/tz-utils'
 import { formatTs } from '@/lib/formatters'
 
 describe('toUtcISO', () => {
@@ -103,5 +103,37 @@ describe('formatTs', () => {
     // 2026-03-10T23:00Z = 2026-03-11T00:00 CET
     const result = formatTs('2026-03-10T23:00:00.000Z', 'Europe/Madrid')
     expect(result).toMatch(/^11 Mar 00:00 /)
+  })
+
+  it('treats no-Z timestamps as UTC (backend naive datetime format)', () => {
+    // "2026-03-11T12:41:00" without Z should be treated as UTC, not local time
+    // so with CET (UTC+1) it must show 13:41, not 12:41
+    const result = formatTs('2026-03-11T12:41:00', 'Europe/Madrid')
+    expect(result).toMatch(/^11 Mar 13:41 /)
+  })
+})
+
+describe('tzAbbr', () => {
+  const winter = new Date('2026-03-11T12:00:00Z') // CET (standard time)
+  const summer = new Date('2026-07-15T12:00:00Z') // CEST (summer time)
+
+  it('returns CET for Europe/Berlin in winter', () => {
+    expect(tzAbbr('Europe/Berlin', winter)).toBe('CET')
+  })
+
+  it('returns CEST for Europe/Berlin in summer', () => {
+    expect(tzAbbr('Europe/Berlin', summer)).toBe('CEST')
+  })
+
+  it('returns CET for Europe/Vienna in winter', () => {
+    expect(tzAbbr('Europe/Vienna', winter)).toBe('CET')
+  })
+
+  it('returns EET for Europe/Helsinki in winter', () => {
+    expect(tzAbbr('Europe/Helsinki', winter)).toBe('EET')
+  })
+
+  it('returns UTC for UTC timezone', () => {
+    expect(tzAbbr('UTC', winter)).toBe('UTC')
   })
 })

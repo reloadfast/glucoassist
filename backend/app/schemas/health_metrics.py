@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.base import UTCDatetime
+
 
 class HealthMetricCreate(BaseModel):
     timestamp: datetime
@@ -16,7 +18,7 @@ class HealthMetricCreate(BaseModel):
 
 class HealthMetricOut(BaseModel):
     id: int
-    timestamp: datetime
+    timestamp: UTCDatetime
     heart_rate_bpm: int | None
     weight_kg: float | None
     activity_type: str | None
@@ -25,7 +27,7 @@ class HealthMetricOut(BaseModel):
     stress_level: int | None
     source: str | None
     notes: str | None
-    created_at: datetime
+    created_at: UTCDatetime
 
     model_config = {"from_attributes": True}
 

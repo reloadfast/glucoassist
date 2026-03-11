@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.base import UTCDatetime
 from app.schemas.glucose import GlucoseReadingOut
 
 
@@ -16,12 +17,12 @@ class MealCreate(BaseModel):
 
 class MealOut(BaseModel):
     id: int
-    timestamp: datetime
+    timestamp: UTCDatetime
     carbs_g: float
     label: str | None
     notes: str | None
     food_item_ids: list[int] | None = None
-    created_at: datetime
+    created_at: UTCDatetime
 
     model_config = {"from_attributes": True}
 

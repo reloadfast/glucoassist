@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
 from app.models.garmin_ingest_log import GarminIngestLog
+from app.schemas.base import UTCDatetime
 
 router = APIRouter(tags=["garmin"])
 
@@ -22,13 +23,13 @@ def garmin_status(settings: Settings = Depends(get_settings)) -> dict:
 
 class GarminIngestLogEntry(BaseModel):
     id: int
-    run_at: datetime
+    run_at: UTCDatetime
     target_date: date
     outcome: str
     fields_populated: str | None
     error_detail: str | None
     retry_count: int
-    created_at: datetime
+    created_at: UTCDatetime
 
     model_config = {"from_attributes": True}
 

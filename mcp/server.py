@@ -8,7 +8,7 @@ logs without the user having to copy-paste data manually.
 
 Configuration (environment variables):
   GLUCOASSIST_API_URL  Base URL of the running GlucoAssist container
-                       (default: http://localhost:3500)
+                       (default: http://192.168.1.110:7900)
 
 Wire-up (add to ~/.copilot/mcp-config.json):
   {
@@ -16,7 +16,7 @@ Wire-up (add to ~/.copilot/mcp-config.json):
       "glucoassist": {
         "command": "python3",
         "args": ["/path/to/GlucoAssist/mcp/server.py"],
-        "env": { "GLUCOASSIST_API_URL": "http://localhost:3500" }
+        "env": { "GLUCOASSIST_API_URL": "http://192.168.1.110:7900" }
       }
     }
   }

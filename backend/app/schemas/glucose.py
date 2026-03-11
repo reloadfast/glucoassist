@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.base import UTCDatetime
+
 
 class GlucoseReadingCreate(BaseModel):
     timestamp: datetime
@@ -13,12 +15,12 @@ class GlucoseReadingCreate(BaseModel):
 
 class GlucoseReadingOut(BaseModel):
     id: int
-    timestamp: datetime
+    timestamp: UTCDatetime
     glucose_mg_dl: int
     trend_arrow: str | None
     source: str
     device_id: str | None
-    created_at: datetime
+    created_at: UTCDatetime
 
     model_config = {"from_attributes": True}
 

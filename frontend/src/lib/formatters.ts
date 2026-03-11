@@ -1,3 +1,5 @@
+import { tzAbbr } from '@/lib/tz-utils'
+
 const TREND_ARROWS: Record<string, string> = {
   DoubleUp: '↑↑',
   SingleUp: '↑',
@@ -16,10 +18,15 @@ export function formatTrend(trend: string | null | undefined): string {
 /**
  * Format a UTC ISO timestamp for display in the given IANA timezone.
  * Always produces "DD Mon HH:mm ABBR" (e.g. "11 Mar 13:41 CET").
- * Uses formatToParts to guarantee day-first order regardless of locale.
+ *
+ * Handles timestamps with or without a trailing 'Z': strings without explicit
+ * timezone info (e.g. "2026-03-11T12:41:00") are treated as UTC, matching the
+ * backend's storage convention.
  */
 export function formatTs(iso: string, tz: string): string {
-  const d = new Date(iso)
+  // Treat timezone-naïve strings as UTC so "12:41" → 13:41 in CET.
+  const utcIso = /[-Z+]\d*$/.test(iso.slice(10)) ? iso : iso + 'Z'
+  const d = new Date(utcIso)
 
   const dateParts = new Intl.DateTimeFormat('en', {
     day: '2-digit',
@@ -37,10 +44,7 @@ export function formatTs(iso: string, tz: string): string {
     timeZone: tz,
   }).format(d)
 
-  const abbr =
-    new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short' })
-      .formatToParts(d)
-      .find((p) => p.type === 'timeZoneName')?.value ?? tz
+  const abbr = tzAbbr(tz, d)
 
   return `${day} ${month} ${time} ${abbr}`
 }
