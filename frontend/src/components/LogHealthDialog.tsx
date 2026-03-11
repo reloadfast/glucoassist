@@ -10,24 +10,22 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { postHealth } from '@/lib/api'
-
-function localNow(): string {
-  const now = new Date()
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-}
+import { useTimezone } from '@/components/TimezoneProvider'
+import { localNow, toUtcISO } from '@/lib/tz-utils'
 
 interface Props {
   onSuccess: () => void
 }
 
 export default function LogHealthDialog({ onSuccess }: Props) {
+  const { tz } = useTimezone()
   const [open, setOpen] = useState(false)
   const [heartRate, setHeartRate] = useState('')
   const [weight, setWeight] = useState('')
   const [activityType, setActivityType] = useState('')
   const [activityMinutes, setActivityMinutes] = useState('')
   const [notes, setNotes] = useState('')
-  const [timestamp, setTimestamp] = useState(localNow)
+  const [timestamp, setTimestamp] = useState(() => localNow(tz))
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -35,7 +33,7 @@ export default function LogHealthDialog({ onSuccess }: Props) {
     setSubmitting(true)
     try {
       await postHealth({
-        timestamp: new Date(timestamp).toISOString(),
+        timestamp: toUtcISO(timestamp, tz),
         heart_rate_bpm: heartRate ? parseInt(heartRate) : undefined,
         weight_kg: weight ? parseFloat(weight) : undefined,
         activity_type: activityType || undefined,
@@ -49,7 +47,7 @@ export default function LogHealthDialog({ onSuccess }: Props) {
       setActivityType('')
       setActivityMinutes('')
       setNotes('')
-      setTimestamp(localNow())
+      setTimestamp(localNow(tz))
     } finally {
       setSubmitting(false)
     }

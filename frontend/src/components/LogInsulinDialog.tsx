@@ -17,22 +17,20 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { postInsulin } from '@/lib/api'
-
-function localNow(): string {
-  const now = new Date()
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-}
+import { useTimezone } from '@/components/TimezoneProvider'
+import { localNow, toUtcISO } from '@/lib/tz-utils'
 
 interface Props {
   onSuccess: () => void
 }
 
 export default function LogInsulinDialog({ onSuccess }: Props) {
+  const { tz } = useTimezone()
   const [open, setOpen] = useState(false)
   const [units, setUnits] = useState('')
   const [type, setType] = useState<'rapid' | 'long'>('rapid')
   const [notes, setNotes] = useState('')
-  const [timestamp, setTimestamp] = useState(localNow)
+  const [timestamp, setTimestamp] = useState(() => localNow(tz))
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,7 +38,7 @@ export default function LogInsulinDialog({ onSuccess }: Props) {
     setSubmitting(true)
     try {
       await postInsulin({
-        timestamp: new Date(timestamp).toISOString(),
+        timestamp: toUtcISO(timestamp, tz),
         units: parseFloat(units),
         type,
         notes: notes || undefined,
@@ -49,7 +47,7 @@ export default function LogInsulinDialog({ onSuccess }: Props) {
       onSuccess()
       setUnits('')
       setNotes('')
-      setTimestamp(localNow())
+      setTimestamp(localNow(tz))
     } finally {
       setSubmitting(false)
     }

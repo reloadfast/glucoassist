@@ -1,5 +1,3 @@
-import type { Tz } from '@/components/TimezoneProvider'
-
 const TREND_ARROWS: Record<string, string> = {
   DoubleUp: '↑↑',
   SingleUp: '↑',
@@ -15,27 +13,29 @@ export function formatTrend(trend: string | null | undefined): string {
   return TREND_ARROWS[trend] ?? trend
 }
 
-const LOCAL_FMT = new Intl.DateTimeFormat(undefined, {
-  day: '2-digit',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
-
-const UTC_FMT = new Intl.DateTimeFormat(undefined, {
-  day: '2-digit',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-  timeZone: 'UTC',
-})
-
-export function formatTs(iso: string, tz: Tz): string {
+/**
+ * Format a UTC ISO timestamp for display in the given IANA timezone.
+ * Appends the timezone abbreviation (e.g. "CET", "UTC", "EDT").
+ */
+export function formatTs(iso: string, tz: string): string {
   const d = new Date(iso)
-  if (tz === 'utc') {
-    return UTC_FMT.format(d) + ' UTC'
-  }
-  return LOCAL_FMT.format(d)
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: tz,
+    timeZoneName: 'short',
+  })
+  // Intl formats vary by locale; split on the timezone name part
+  const parts = fmt.formatToParts(d)
+  const datePart = parts
+    .filter((p) => (p.type !== 'timeZoneName' && p.type !== 'literal') || p.value !== ', ')
+    .map((p) => p.value)
+    .join('')
+    .replace(/,\s*$/, '')
+    .trim()
+  const tzAbbr = parts.find((p) => p.type === 'timeZoneName')?.value ?? tz
+  return `${datePart} ${tzAbbr}`
 }

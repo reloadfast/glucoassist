@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { HelpPopover } from '@/components/HelpPopover'
 import { HelpSheet, HelpSection } from '@/components/HelpSheet'
 import { useTheme } from '@/components/ThemeProvider'
@@ -21,6 +22,7 @@ import { getGarminStatus, postRetrain } from '@/lib/api'
 import type { GarminIngestLogEntry, GarminStatusResponse, RetrainLogEntry } from '@/lib/api'
 import { useGarminIngestLog } from '@/hooks/useGarminIngestLog'
 import { formatTs } from '@/lib/formatters'
+import { allIanaTz } from '@/lib/tz-utils'
 
 function RetrainLogRow({ entry }: { entry: RetrainLogEntry }) {
   const { tz } = useTimezone()
@@ -132,6 +134,89 @@ function GarminIngestLogTable({
         </div>
       )}
     </div>
+  )
+}
+
+// Searchable IANA timezone combobox
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (tz: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const allTz = useMemo(() => allIanaTz(), [])
+  const filtered = useMemo(
+    () =>
+      query.trim() === ''
+        ? allTz
+        : allTz.filter((tz) => tz.toLowerCase().includes(query.toLowerCase())),
+    [allTz, query],
+  )
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-56 justify-between font-normal text-sm"
+        >
+          <span className="truncate">{value}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="ml-2 h-4 w-4 shrink-0 opacity-50"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-0">
+        <div className="border-b px-3 py-2">
+          <input
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            placeholder="Search timezone…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <ul className="max-h-60 overflow-y-auto py-1 text-sm">
+          {filtered.length === 0 && <li className="px-3 py-2 text-muted-foreground">No results</li>}
+          {filtered.map((tz) => (
+            <li
+              key={tz}
+              className={`flex cursor-pointer items-center px-3 py-1.5 hover:bg-accent hover:text-accent-foreground ${tz === value ? 'font-medium' : ''}`}
+              onClick={() => {
+                onChange(tz)
+                setOpen(false)
+                setQuery('')
+              }}
+            >
+              {tz === value && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-2 h-3.5 w-3.5 shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+              {tz !== value && <span className="mr-2 w-3.5 shrink-0" />}
+              {tz}
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -406,15 +491,7 @@ export default function Settings() {
         <CardContent>
           <div className="flex items-center gap-4">
             <span className="text-sm">Timezone</span>
-            <Select value={tz} onValueChange={(v) => setTz(v as 'local' | 'utc')}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="local">Local time</SelectItem>
-                <SelectItem value="utc">UTC</SelectItem>
-              </SelectContent>
-            </Select>
+            <TimezoneSelect value={tz} onChange={setTz} />
           </div>
         </CardContent>
       </Card>

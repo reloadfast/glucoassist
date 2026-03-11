@@ -15,13 +15,10 @@ import DoseProposalBadge from '@/components/DoseProposalBadge'
 import { useFoodLibrary } from '@/hooks/useFoodLibrary'
 import { createFoodItem, getFoodSuggestions, postInsulin, postMeal } from '@/lib/api'
 import type { FoodItem, FoodItemCreate } from '@/lib/api'
+import { useTimezone } from '@/components/TimezoneProvider'
+import { localNow, toUtcISO } from '@/lib/tz-utils'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-function localNow(): string {
-  const now = new Date()
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-}
 
 function computeCarbs(item: FoodItem, portionG: number): number {
   return Math.round((portionG / 100) * item.carbs_per_100g * 10) / 10
@@ -182,6 +179,7 @@ interface Props {
 }
 
 export default function LogMealDialog({ onSuccess, trigger }: Props) {
+  const { tz } = useTimezone()
   const [open, setOpen] = useState(false)
 
   // Cart
@@ -199,7 +197,7 @@ export default function LogMealDialog({ onSuccess, trigger }: Props) {
   const [manualCarbs, setManualCarbs] = useState('')
 
   // Meal metadata
-  const [timestamp, setTimestamp] = useState(localNow)
+  const [timestamp, setTimestamp] = useState(() => localNow(tz))
   const [notes, setNotes] = useState('')
   const [insulinUnits, setInsulinUnits] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -210,11 +208,11 @@ export default function LogMealDialog({ onSuccess, trigger }: Props) {
   // Load suggestions when dialog opens
   useEffect(() => {
     if (!open) return
-    const hour = new Date().getHours()
+    const hour = parseInt(localNow(tz).slice(11, 13))
     getFoodSuggestions(hour)
       .then((res) => setSuggestions(res.items))
       .catch(() => setSuggestions([]))
-  }, [open])
+  }, [open, tz])
 
   const searchResults = useMemo(() => {
     if (!query.trim()) return []
@@ -253,7 +251,7 @@ export default function LogMealDialog({ onSuccess, trigger }: Props) {
     setShowCreateForm(false)
     setSuggestions([])
     setManualCarbs('')
-    setTimestamp(localNow())
+    setTimestamp(localNow(tz))
     setNotes('')
     setInsulinUnits('')
   }
@@ -266,7 +264,7 @@ export default function LogMealDialog({ onSuccess, trigger }: Props) {
 
     setSubmitting(true)
     try {
-      const ts = new Date(timestamp).toISOString()
+      const ts = toUtcISO(timestamp, tz)
       const label = cart.length > 0 ? cart.map((e) => e.food.name).join(', ') : undefined
       await postMeal({
         timestamp: ts,
@@ -482,7 +480,7 @@ export default function LogMealDialog({ onSuccess, trigger }: Props) {
               carbsG={
                 cart.length > 0 ? Math.round(totalCarbs * 10) / 10 : parseFloat(manualCarbs) || 0
               }
-              hour={new Date(timestamp).getHours()}
+              hour={parseInt(timestamp.slice(11, 13))}
               onUse={(units) => setInsulinUnits(String(units))}
             />
             <div className="space-y-1">

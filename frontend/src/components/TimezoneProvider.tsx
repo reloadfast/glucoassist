@@ -1,6 +1,11 @@
 import { createContext, useContext, useState } from 'react'
+import { browserTz } from '@/lib/tz-utils'
 
-export type Tz = 'local' | 'utc'
+/**
+ * IANA timezone name (e.g. "Europe/Madrid", "UTC", "America/New_York").
+ * Legacy values "local" and "utc" are migrated on first read.
+ */
+export type Tz = string
 
 interface TzContextValue {
   tz: Tz
@@ -8,7 +13,7 @@ interface TzContextValue {
 }
 
 const TzContext = createContext<TzContextValue>({
-  tz: 'local',
+  tz: 'UTC',
   setTz: () => {},
 })
 
@@ -18,9 +23,12 @@ export function useTimezone() {
 }
 
 function getInitialTz(): Tz {
-  if (typeof window === 'undefined') return 'local'
+  if (typeof window === 'undefined') return browserTz()
   const stored = localStorage.getItem('tz')
-  return stored === 'utc' ? 'utc' : 'local'
+  // Migrate legacy values to IANA names
+  if (!stored || stored === 'local') return browserTz()
+  if (stored === 'utc') return 'UTC'
+  return stored
 }
 
 export function TimezoneProvider({ children }: { children: React.ReactNode }) {
