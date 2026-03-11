@@ -147,3 +147,50 @@ frontend/src/
 - Never commit `.env`, secrets, or tokens
 - All secrets via env vars only; document in `.env.example` with placeholder values
 - SQLite file is gitignored
+
+---
+
+## AI Assistant — Live Data Access (MCP Server)
+
+`mcp/server.py` is a [Model Context Protocol](https://modelcontextprotocol.io) server that lets a Copilot CLI session (or any MCP-capable client) call GlucoAssist data tools directly, without copy-pasting values.
+
+### Prerequisites
+
+```bash
+pip install mcp httpx   # mcp 1.26+ required
+```
+
+### Wire up (GitHub Copilot CLI)
+
+Add the following entry to `~/.copilot/mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "glucoassist": {
+      "command": "python3",
+      "args": ["/absolute/path/to/GlucoAssist/mcp/server.py"],
+      "env": { "GLUCOASSIST_API_URL": "http://localhost:3500" }
+    }
+  }
+}
+```
+
+Restart the CLI session after editing the config. The container must be running.
+
+### Available tools
+
+| Tool | Description |
+|---|---|
+| `get_status` | Latest reading, 24 h stats, IOB |
+| `get_glucose_history(hours)` | Recent CGM readings (default 4 h) |
+| `get_forecast` | 30/60/90/120 min predictions + action suggestions |
+| `get_insulin_log(hours)` | Recent insulin doses |
+| `get_meal_log(hours)` | Recent meals |
+| `get_analytics` | 30/60/90 d stats, HbA1c estimate, patterns |
+| `get_ratios` | ICR / CF by time-of-day slot |
+| `get_dose_proposal(carbs_g)` | Meal bolus proposal |
+| `log_insulin(units, type)` | Write insulin dose (confirm with user first) |
+| `log_meal(carbs_g, label)` | Write meal entry (confirm with user first) |
+
+> **Note:** `mcp-config.json` is not committed to the repository — it lives in your home directory and may contain secrets for other MCP servers.
