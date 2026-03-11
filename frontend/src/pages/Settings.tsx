@@ -538,7 +538,7 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
             Autoresearcher
-            <HelpPopover>
+            <HelpPopover title="Autoresearcher">
               <p>
                 The Autoresearcher autonomously proposes, evaluates, and promotes improvements to
                 the glucose forecasting model using a locally-hosted LLM (Ollama). Each experiment

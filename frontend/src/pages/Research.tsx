@@ -67,14 +67,7 @@ export default function Research() {
             Autonomous forecast model improvement — powered by a self-hosted LLM.
           </p>
         </div>
-        <HelpSheet
-          title="How the Research Loop Works"
-          trigger={
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              How it works
-            </Button>
-          }
-        >
+        <HelpSheet title="How the Research Loop Works" variant="link" triggerLabel="How it works">
           <HelpSection title="Overview">
             <p>
               The Autoresearcher is an autonomous agent that reads a research program describing
