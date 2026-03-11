@@ -38,7 +38,7 @@ CV_VAL_DAYS = 7
 CV_STEP_DAYS = 7
 READINGS_PER_DAY = 288
 
-_PROGRAM_MD_PATH = Path(__file__).parent.parent.parent.parent / "autoresearcher" / "program.md"
+_PROGRAM_MD_PATH = Path(__file__).parent / "autoresearcher_program.md"
 
 # ──────────────────────────────────────────────
 # State
