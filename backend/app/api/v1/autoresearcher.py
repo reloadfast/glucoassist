@@ -17,6 +17,17 @@ _DEFAULTS = {
 }
 
 
+_PROGRAM_MD_KEY = "autoresearcher_program_md"
+
+
+def _get_program_md(db: Session) -> tuple[str, bool]:
+    """Return (content, is_custom). Falls back to bundled default."""
+    row = db.get(AppSetting, _PROGRAM_MD_KEY)
+    if row:
+        return row.value, True
+    return ar_service.get_default_program_md(), False
+
+
 def _get_setting(db: Session, key: str) -> str:
     row = db.get(AppSetting, key)
     return row.value if row else _DEFAULTS.get(key, "")
@@ -44,6 +55,7 @@ def start_run(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
 
     ollama_url = _get_setting(db, "autoresearcher_ollama_url")
     ollama_model = _get_setting(db, "autoresearcher_ollama_model")
+    program_md, _ = _get_program_md(db)
 
     try:
         run_id = ar_service.start_run(
@@ -51,6 +63,7 @@ def start_run(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
             n_experiments=body.n_experiments,
             ollama_url=ollama_url,
             ollama_model=ollama_model,
+            program_md=program_md,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -133,3 +146,41 @@ def list_ollama_models(db: Session = Depends(get_db)) -> dict:
         raise HTTPException(
             status_code=502, detail=f"Cannot reach Ollama at {ollama_url}: {exc}"
         ) from exc
+
+
+class ProgramUpdateRequest(BaseModel):
+    content: str
+
+
+@router.get("/program")
+def get_program(db: Session = Depends(get_db)) -> dict:
+    """Return the current research program. is_custom=false means the bundled default is active."""
+    content, is_custom = _get_program_md(db)
+    return {"content": content, "is_custom": is_custom}
+
+
+@router.put("/program")
+def update_program(body: ProgramUpdateRequest, db: Session = Depends(get_db)) -> dict:
+    """Save a custom research program to the database."""
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Program content cannot be empty")
+    row = db.get(AppSetting, _PROGRAM_MD_KEY)
+    if row is None:
+        row = AppSetting(key=_PROGRAM_MD_KEY, value=content)
+        db.add(row)
+    else:
+        row.value = content
+    db.commit()
+    return {"content": content, "is_custom": True}
+
+
+@router.post("/program/reset")
+def reset_program(db: Session = Depends(get_db)) -> dict:
+    """Delete the custom program, reverting to the bundled default."""
+    row = db.get(AppSetting, _PROGRAM_MD_KEY)
+    if row is not None:
+        db.delete(row)
+        db.commit()
+    content = ar_service.get_default_program_md()
+    return {"content": content, "is_custom": False}

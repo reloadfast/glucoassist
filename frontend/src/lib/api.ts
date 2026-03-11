@@ -645,3 +645,26 @@ export function pingOllama(): Promise<OllamaPingResponse> {
 export function listOllamaModels(): Promise<OllamaModelsResponse> {
   return apiFetch<OllamaModelsResponse>('/autoresearcher/ollama/models')
 }
+
+export interface ProgramMdResponse {
+  content: string
+  is_custom: boolean
+}
+
+export function getProgramMd(): Promise<ProgramMdResponse> {
+  return apiFetch<ProgramMdResponse>('/autoresearcher/program')
+}
+
+export function saveProgramMd(content: string): Promise<ProgramMdResponse> {
+  return apiFetch<ProgramMdResponse>('/autoresearcher/program', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+}
+
+export function resetProgramMd(): Promise<ProgramMdResponse> {
+  return apiFetch<ProgramMdResponse>('/autoresearcher/program/reset', {
+    method: 'POST',
+  })
+}

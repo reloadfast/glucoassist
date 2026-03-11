@@ -359,30 +359,20 @@ def _save_promoted_config(db_path: str, proposal: dict) -> None:
 # Main loop (runs in background thread)
 # ──────────────────────────────────────────────
 
+def get_default_program_md() -> str:
+    """Return the bundled program.md content."""
+    return _PROGRAM_MD_PATH.read_text()
+
+
 def _run_loop(
     db_path: str,
     n_experiments: int,
     ollama_url: str,
     ollama_model: str,
     run_id: str,
+    program_md: str,
 ) -> None:
     global _state  # noqa: PLW0603 — module-level singleton
-
-    program_path = _PROGRAM_MD_PATH
-    if program_path.exists():
-        program_md = program_path.read_text()
-    else:
-        # Fallback minimal prompt if program.md is not bundled
-        program_md = (
-            "Improve the GlucoAssist glucose forecasting model. "
-            "Current baselines — 30min MAE: 17.74, 60min MAE: 25.18, "
-            "90min MAE: 27.73, 120min MAE: 28.60. "
-            "Propose one experiment at a time using ridge or lightgbm algorithms."
-        )
-        log.warning(
-            "Autoresearcher: program.md not found at %s; using minimal prompt",
-            program_path,
-        )
 
     try:
         log.info("Autoresearcher: loading glucose data from %s", db_path)
@@ -518,11 +508,14 @@ def start_run(
     n_experiments: int,
     ollama_url: str,
     ollama_model: str,
+    program_md: str | None = None,
 ) -> str:
     """Start an ad-hoc research run in a background thread.
 
     Returns the run_id. Raises RuntimeError if a run is already in progress.
     """
+    if program_md is None:
+        program_md = get_default_program_md()
     if not _thread_lock.acquire(blocking=False):
         raise RuntimeError("A research run is already in progress")
 
@@ -537,7 +530,7 @@ def start_run(
 
     def _worker():
         try:
-            _run_loop(db_path, n_experiments, ollama_url, ollama_model, run_id)
+            _run_loop(db_path, n_experiments, ollama_url, ollama_model, run_id, program_md)
         finally:
             _thread_lock.release()
 
