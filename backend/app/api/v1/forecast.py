@@ -25,7 +25,7 @@ def get_forecast_endpoint(db: Session = Depends(get_db)) -> ForecastResponse:  #
     try:
         from app.models.glucose import GlucoseReading as _GlucoseReading
         from app.services.iob import compute_cob, compute_iob
-        from app.services.ratios import _block_for_hour, get_ratios
+        from app.services.ratios import _block_for_hour, compute_ratios
         from app.services.suggestions import compute_suggestions
 
         iob = compute_iob(db)
@@ -41,7 +41,7 @@ def get_forecast_endpoint(db: Session = Depends(get_db)) -> ForecastResponse:  #
 
         hour = datetime.now(UTC).hour
         block = _block_for_hour(hour)
-        ratios = get_ratios(db)
+        ratios = compute_ratios(db)
         block_data = next((b for b in ratios["blocks"] if b["block"] == block), None)
         block_icr = block_data["icr"].mean if block_data and block_data["icr"] else None
         block_cf = block_data["cf"].mean if block_data and block_data["cf"] else None
