@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
 from app.api.v1.analytics import router as analytics_router
+from app.api.v1.app_settings import router as app_settings_router
+from app.api.v1.autoresearcher import router as autoresearcher_router
 from app.api.v1.entries import router as entries_router
 from app.api.v1.food_items import router as food_items_router
 from app.api.v1.forecast import router as forecast_router
@@ -26,3 +28,5 @@ router.include_router(ingest_router)
 router.include_router(forecast_router)
 router.include_router(ratios_router)
 router.include_router(garmin_router)
+router.include_router(app_settings_router)
+router.include_router(autoresearcher_router)

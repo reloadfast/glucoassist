@@ -16,6 +16,8 @@ garminconnect==0.2.38
 scikit-learn==1.8.0
 numpy==2.3.5
 joblib==1.5.3
+pandas==2.3.3
+lightgbm==4.6.0
 
 # ── Dev / Test ─────────────────────────────────────────────────────────────────
 pytest==8.3.5
