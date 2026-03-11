@@ -21,7 +21,6 @@ from typing import NamedTuple
 import joblib
 import numpy as np
 from sklearn.linear_model import Ridge
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy.orm import Session
 
@@ -46,8 +45,12 @@ RISK_THRESHOLDS = [  # (upper_exclusive, level)
     (0.50, "high"),
     (1.01, "critical"),
 ]
-VALIDATION_FRACTION = 0.2
-RANDOM_STATE = 42
+# Walk-forward CV parameters — produces honest MAE comparable to research loop.
+# Final model is always trained on the full dataset for best production accuracy.
+WF_TRAIN_DAYS = 14  # minimum training window per fold
+WF_VAL_DAYS = 7  # validation window per fold
+WF_STEP_DAYS = 7  # step between folds
+READINGS_PER_DAY = 288
 N_FEATURES = 15  # 6 glucose + 3 rate + 2 hour cyclic + 2 weekday cyclic + 1 IOB + 1 COB
 REGISTRY_MAX_ENTRIES = 50
 
@@ -234,6 +237,10 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
     """
     Fetch all readings, train Ridge models for all three horizons.
 
+    MAE is evaluated using walk-forward time-series cross-validation so that
+    the reported numbers are directly comparable to the research loop baseline.
+    The final model is trained on the full dataset for best production accuracy.
+
     Candidate models are evaluated against the current live models (A/B comparison).
     Live models are only replaced when the candidate mean MAE is strictly better.
     Returns TrainResult with success/promoted flags and per-horizon MAEs.
@@ -284,11 +291,7 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
         iob_values.append(total)
 
     # Precompute COB (carbs on board) at each glucose timestamp from meal logs.
-    meals = (
-        db.query(Meal.timestamp, Meal.carbs_g)
-        .order_by(Meal.timestamp.asc())
-        .all()
-    )
+    meals = db.query(Meal.timestamp, Meal.carbs_g).order_by(Meal.timestamp.asc()).all()
     cob_values: list[float] = []
     for ts in timestamps:
         if ts.tzinfo is None:
@@ -307,6 +310,11 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
 
     model_dir = _model_dir()
     model_dir.mkdir(parents=True, exist_ok=True)
+
+    # Walk-forward CV constants (in number of feature rows at 5-min cadence).
+    wf_train_n = WF_TRAIN_DAYS * READINGS_PER_DAY
+    wf_val_n = WF_VAL_DAYS * READINGS_PER_DAY
+    wf_step_n = WF_STEP_DAYS * READINGS_PER_DAY
 
     candidate_maes: dict[str, float] = {}
     for horizon_min, n_steps in HORIZONS.items():
@@ -327,29 +335,63 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
             )
 
         X, y = X_all[:n], y[:n]
-        X_tr, X_val, y_tr, y_val = train_test_split(
-            X, y, test_size=VALIDATION_FRACTION, shuffle=False, random_state=RANDOM_STATE
-        )
 
+        # ── Walk-forward CV for honest MAE reporting ───────────────────────
+        # Each fold trains on wf_train_n rows and validates on the next
+        # wf_val_n rows. MAE is averaged across all folds. residual_std is
+        # pooled across all folds for CI width estimation.
+        fold_maes: list[float] = []
+        fold_residuals: list[float] = []
+        start = 0
+        while start + wf_train_n + wf_val_n <= n:
+            X_cv_tr = X[start : start + wf_train_n]
+            y_cv_tr = y[start : start + wf_train_n]
+            X_cv_val = X[start + wf_train_n : start + wf_train_n + wf_val_n]
+            y_cv_val = y[start + wf_train_n : start + wf_train_n + wf_val_n]
+            _sc = StandardScaler()
+            _r = Ridge(alpha=1.0)
+            _r.fit(_sc.fit_transform(X_cv_tr), y_cv_tr)
+            _preds = _r.predict(_sc.transform(X_cv_val))
+            _resid = y_cv_val - _preds
+            fold_maes.append(float(np.mean(np.abs(_resid))))
+            fold_residuals.extend(_resid.tolist())
+            start += wf_step_n
+
+        if fold_maes:
+            mae = float(np.mean(fold_maes))
+            residual_std = float(np.std(fold_residuals))
+        else:
+            # Fewer than wf_train_n + wf_val_n samples — fall back to a single
+            # chronological split so early-stage installs still get a number.
+            split = int(n * 0.8)
+            _sc = StandardScaler()
+            _r = Ridge(alpha=1.0)
+            _r.fit(_sc.fit_transform(X[:split]), y[:split])
+            _preds = _r.predict(_sc.transform(X[split:]))
+            _resid = y[split:] - _preds
+            mae = float(np.mean(np.abs(_resid)))
+            residual_std = float(np.std(_resid))
+            logger.info(
+                "Forecasting: h%d — insufficient data for walk-forward CV "
+                "(%d samples), fell back to single chronological split",
+                horizon_min,
+                n,
+            )
+
+        # ── Final model trained on full dataset for production use ─────────
         scaler = StandardScaler()
-        X_tr_s = scaler.fit_transform(X_tr)
-        X_val_s = scaler.transform(X_val)
-
+        X_tr_s = scaler.fit_transform(X)
         ridge = Ridge(alpha=1.0)
-        ridge.fit(X_tr_s, y_tr)
-
-        val_preds = ridge.predict(X_val_s)
-        residuals = y_val - val_preds
-        residual_std = float(np.std(residuals))
-        mae = float(np.mean(np.abs(residuals)))
+        ridge.fit(X_tr_s, y)
 
         hm = _HorizonModel(ridge, scaler, residual_std)
         joblib.dump(hm, _candidate_model_path(horizon_min))
         candidate_maes[f"h{horizon_min}"] = round(mae, 2)
         logger.info(
-            "Forecasting: trained candidate h%d  MAE=%.2f  residual_std=%.2f",
+            "Forecasting: trained candidate h%d  MAE=%.2f (walk-forward CV, %d folds)  residual_std=%.2f",
             horizon_min,
             mae,
+            len(fold_maes),
             residual_std,
         )
 
@@ -364,6 +406,9 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
             "last_trained": trained_at,
             "training_samples": len(rows),
             "mae_per_horizon": candidate_maes,
+            "mae_method": "walk-forward-cv",
+            "wf_train_days": WF_TRAIN_DAYS,
+            "wf_val_days": WF_VAL_DAYS,
         }
         _meta_path().write_text(json.dumps(meta))
         notes = (
@@ -389,6 +434,7 @@ def train_models(db: Session, trigger_source: str = "scheduled") -> TrainResult:
             "version_id": trained_at,
             "training_samples": len(rows),
             "mae_per_horizon": candidate_maes,
+            "mae_method": "walk-forward-cv",
             "promoted": promoted,
             "trained_at": trained_at,
             "trigger_source": trigger_source,
@@ -471,12 +517,13 @@ def get_forecast(db: Session) -> ForecastResponse:
     for horizon_min in HORIZONS:
         try:
             hm_check: _HorizonModel = joblib.load(_model_path(horizon_min))
-            if hm_check.scaler.n_features_in_ != N_FEATURES:
+            n_features_fitted = getattr(hm_check.scaler, "n_features_in_", None)
+            if n_features_fitted != N_FEATURES:
                 logger.warning(
                     "Forecasting: stale model h%d expects %d features but N_FEATURES=%d"
                     " — purging live models for retrain",
                     horizon_min,
-                    hm_check.scaler.n_features_in_,
+                    n_features_fitted,
                     N_FEATURES,
                 )
                 _delete_live_models()
