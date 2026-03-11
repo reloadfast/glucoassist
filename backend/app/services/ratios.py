@@ -17,6 +17,8 @@ import statistics
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
+from app.schemas.ratios import DoseProposalResponse
+
 from sqlalchemy.orm import Session
 
 from app.models.glucose import GlucoseReading
@@ -222,3 +224,65 @@ def compute_ratios(db: Session, days: int = 90) -> dict[str, object]:
             }
         )
     return {"blocks": blocks}
+
+
+_DOSE_DISCLAIMER = (
+    "Dose proposal is for decision-support only — always follow guidance "
+    "from your healthcare team."
+)
+
+
+def get_dose_proposal(
+    db: Session,
+    hour: int,
+    carbs_g: float,
+    days: int = 90,
+) -> DoseProposalResponse:
+    """
+    Compute a suggested bolus dose for a given carb amount and hour of day.
+
+    Uses the ICR for the relevant time block.  Returns sufficient_data=False
+    when fewer than MIN_SAMPLES pairings exist for that block.
+    """
+    since = datetime.now(UTC) - timedelta(days=days)
+    icr_samples = _collect_icr_samples(db, since)
+    block = _block_for_hour(hour)
+    block_samples = icr_samples[block]
+
+    if len(block_samples) < MIN_SAMPLES:
+        return DoseProposalResponse(
+            block=block,
+            icr=None,
+            suggested_units=None,
+            suggested_units_low=None,
+            suggested_units_high=None,
+            sufficient_data=False,
+            days_analyzed=days,
+            disclaimer=_DOSE_DISCLAIMER,
+        )
+
+    icr_est = _ci(block_samples)
+
+    from app.schemas.ratios import RatioEstimate as SchemaRatioEstimate
+
+    suggested = round(carbs_g / icr_est.mean, 1)
+    # Dividing by CI upper (larger ICR → fewer units) gives the lower bound
+    suggested_low = round(carbs_g / icr_est.ci_upper, 1) if icr_est.ci_upper > 0 else suggested
+    # Dividing by CI lower (smaller ICR → more units) gives the upper bound
+    suggested_high = round(carbs_g / icr_est.ci_lower, 1) if icr_est.ci_lower > 0 else suggested
+
+    return DoseProposalResponse(
+        block=block,
+        icr=SchemaRatioEstimate(
+            mean=icr_est.mean,
+            ci_lower=icr_est.ci_lower,
+            ci_upper=icr_est.ci_upper,
+            n=icr_est.n,
+        ),
+        suggested_units=suggested,
+        suggested_units_low=suggested_low,
+        suggested_units_high=suggested_high,
+        sufficient_data=True,
+        days_analyzed=days,
+        disclaimer=_DOSE_DISCLAIMER,
+    )

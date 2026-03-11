@@ -2,13 +2,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.ratios import RatioEstimate, RatiosResponse, TimeBlockRatio
+from app.schemas.ratios import DoseProposalResponse, RatioEstimate, RatiosResponse, TimeBlockRatio
 from app.services.ratios import (
     MIN_SAMPLES,
     TIME_BLOCKS,
     _ci,
     _collect_cf_samples,
     _collect_icr_samples,
+    get_dose_proposal,
 )
 
 router = APIRouter(prefix="/ratios", tags=["ratios"])
@@ -60,3 +61,13 @@ def get_ratios(
         days_analyzed=days,
         disclaimer=DISCLAIMER,
     )
+
+
+@router.get("/dose-proposal", response_model=DoseProposalResponse)
+def get_dose_proposal_endpoint(
+    carbs_g: float = Query(..., gt=0, le=500, description="Carbohydrates in grams"),
+    hour: int = Query(..., ge=0, le=23, description="Hour of day (0–23, local time)"),
+    days: int = Query(default=90, ge=14, le=365, description="Look-back window for ICR estimation"),
+    db: Session = Depends(get_db),  # noqa: B008
+) -> DoseProposalResponse:
+    return get_dose_proposal(db, hour=hour, carbs_g=carbs_g, days=days)

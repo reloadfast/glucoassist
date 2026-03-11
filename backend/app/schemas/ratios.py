@@ -21,3 +21,14 @@ class RatiosResponse(BaseModel):
     blocks: list[TimeBlockRatio]
     days_analyzed: int
     disclaimer: str
+
+
+class DoseProposalResponse(BaseModel):
+    block: str
+    icr: RatioEstimate | None
+    suggested_units: float | None
+    suggested_units_low: float | None
+    suggested_units_high: float | None
+    sufficient_data: bool
+    days_analyzed: int
+    disclaimer: str

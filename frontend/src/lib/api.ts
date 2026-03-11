@@ -219,6 +219,27 @@ export function getRatios(days = 90): Promise<RatiosResponse> {
   return apiFetch<RatiosResponse>(`/ratios?days=${days}`)
 }
 
+export interface DoseProposalResponse {
+  block: string
+  icr: RatioEstimate | null
+  suggested_units: number | null
+  suggested_units_low: number | null
+  suggested_units_high: number | null
+  sufficient_data: boolean
+  days_analyzed: number
+  disclaimer: string
+}
+
+export function getDoseProposal(
+  carbs_g: number,
+  hour: number,
+  days = 90,
+): Promise<DoseProposalResponse> {
+  return apiFetch<DoseProposalResponse>(
+    `/ratios/dose-proposal?carbs_g=${carbs_g}&hour=${hour}&days=${days}`,
+  )
+}
+
 // ─── Model registry / retrain ──────────────────────────────────────────────
 
 export interface RetrainLogEntry {

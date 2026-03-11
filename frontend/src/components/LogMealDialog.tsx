@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import DoseProposalBadge from '@/components/DoseProposalBadge'
 import { useFoodLibrary } from '@/hooks/useFoodLibrary'
 import { createFoodItem, getFoodSuggestions, postInsulin, postMeal } from '@/lib/api'
 import type { FoodItem, FoodItemCreate } from '@/lib/api'
@@ -475,18 +476,28 @@ export default function LogMealDialog({ onSuccess, trigger }: Props) {
           </div>
 
           {/* ── Insulin ── */}
-          <div className="border-t pt-3 space-y-1">
-            <Label htmlFor="bolus-units">Rapid insulin taken (units, optional)</Label>
-            <Input
-              id="bolus-units"
-              type="number"
-              step="0.5"
-              min="0.5"
-              max="100"
-              value={insulinUnits}
-              onChange={(e) => setInsulinUnits(e.target.value)}
-              placeholder="e.g. 4"
+          <div className="border-t pt-3 space-y-2">
+            {/* Dose proposal derived from current carbs + selected hour */}
+            <DoseProposalBadge
+              carbsG={
+                cart.length > 0 ? Math.round(totalCarbs * 10) / 10 : parseFloat(manualCarbs) || 0
+              }
+              hour={new Date(timestamp).getHours()}
+              onUse={(units) => setInsulinUnits(String(units))}
             />
+            <div className="space-y-1">
+              <Label htmlFor="bolus-units">Rapid insulin taken (units, optional)</Label>
+              <Input
+                id="bolus-units"
+                type="number"
+                step="0.5"
+                min="0.5"
+                max="100"
+                value={insulinUnits}
+                onChange={(e) => setInsulinUnits(e.target.value)}
+                placeholder="e.g. 4"
+              />
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={submitting || !carbsValid}>
