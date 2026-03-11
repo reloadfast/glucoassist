@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { toUtcISO, isoToLocalInput, localNow } from '@/lib/tz-utils'
+import { formatTs } from '@/lib/formatters'
 
 describe('toUtcISO', () => {
   it('converts CET (UTC+1) winter time correctly', () => {
@@ -77,5 +78,30 @@ describe('localNow', () => {
     // Within 1 minute (localNow truncates to minutes)
     expect(recovered).toBeGreaterThanOrEqual(before - 60_000)
     expect(recovered).toBeLessThanOrEqual(after + 60_000)
+  })
+})
+
+describe('formatTs', () => {
+  it('formats UTC time in CET (UTC+1) as local time with abbreviation', () => {
+    // 12:41 UTC = 13:41 CET
+    const result = formatTs('2026-03-11T12:41:00.000Z', 'Europe/Madrid')
+    expect(result).toMatch(/^11 Mar 13:41 /)
+  })
+
+  it('formats UTC time in UTC as UTC', () => {
+    const result = formatTs('2026-03-11T12:41:00.000Z', 'UTC')
+    expect(result).toMatch(/^11 Mar 12:41 UTC/)
+  })
+
+  it('formats UTC time in CEST (UTC+2) as local time', () => {
+    // 08:30 UTC = 10:30 CEST (summer)
+    const result = formatTs('2026-07-15T08:30:00.000Z', 'Europe/Madrid')
+    expect(result).toMatch(/^15 Jul 10:30 /)
+  })
+
+  it('formats midnight correctly — does not bleed into previous day', () => {
+    // 2026-03-10T23:00Z = 2026-03-11T00:00 CET
+    const result = formatTs('2026-03-10T23:00:00.000Z', 'Europe/Madrid')
+    expect(result).toMatch(/^11 Mar 00:00 /)
   })
 })
