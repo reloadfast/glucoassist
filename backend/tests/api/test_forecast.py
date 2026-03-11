@@ -50,7 +50,7 @@ async def test_forecast_insufficient_data(client, db_session, tmp_path, monkeypa
 
 @pytest.mark.asyncio
 async def test_forecast_with_trained_models(client, db_session, tmp_path, monkeypatch):
-    """With ≥288 readings and trained models, returns 3 horizon forecasts."""
+    """With ≥288 readings and trained models, returns 4 horizon forecasts."""
     monkeypatch.setattr("app.services.forecasting._model_dir", lambda: tmp_path)
     _add_readings(db_session, count=400)
 
@@ -62,8 +62,8 @@ async def test_forecast_with_trained_models(client, db_session, tmp_path, monkey
     assert resp.status_code == 200
     data = resp.json()
     assert data["model_trained"] is True
-    assert len(data["forecasts"]) == 3
-    assert {f["horizon_min"] for f in data["forecasts"]} == {30, 60, 120}
+    assert len(data["forecasts"]) == 4
+    assert {f["horizon_min"] for f in data["forecasts"]} == {30, 60, 90, 120}
     for f in data["forecasts"]:
         assert f["predicted_mg_dl"] > 0
         assert f["ci_lower"] <= f["predicted_mg_dl"] <= f["ci_upper"]
@@ -71,6 +71,9 @@ async def test_forecast_with_trained_models(client, db_session, tmp_path, monkey
         assert 0.0 <= f["p_hyper"] <= 1.0
         assert f["risk_level"] in {"low", "moderate", "high", "critical"}
     assert data["overall_risk"] in {"low", "moderate", "high", "critical"}
+    # suggestions field always present
+    assert "suggestions" in data
+    assert isinstance(data["suggestions"], list)
 
 
 @pytest.mark.asyncio
@@ -87,7 +90,7 @@ async def test_forecast_meta_populated(client, db_session, tmp_path, monkeypatch
     meta = resp.json()["meta"]
     assert meta["last_trained"] is not None
     assert meta["training_samples"] == 400
-    assert set(meta["mae_per_horizon"].keys()) == {"h30", "h60", "h120"}
+    assert set(meta["mae_per_horizon"].keys()) == {"h30", "h60", "h90", "h120"}
 
 
 @pytest.mark.asyncio

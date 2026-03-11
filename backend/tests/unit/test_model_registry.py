@@ -107,7 +107,7 @@ def test_train_result_first_training_always_promotes(db_session, tmp_path, monke
     result = train_models(db_session)
     assert result.success is True
     assert result.promoted is True
-    assert set(result.maes.keys()) == {"h30", "h60", "h120"}
+    assert set(result.maes.keys()) == {"h30", "h60", "h90", "h120"}
 
 
 @pytest.mark.unit

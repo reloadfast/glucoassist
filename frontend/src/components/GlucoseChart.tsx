@@ -4,6 +4,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -159,6 +160,23 @@ export default function GlucoseChart({ readings, forecasts = [], eventMarkers = 
                 isAnimationActive={false}
               />
             )}
+
+            {/* Horizon label markers */}
+            {hasForecast &&
+              forecasts.map((f) => (
+                <ReferenceDot
+                  key={`h${f.horizon_min}`}
+                  x={format(addMinutes(lastTime, f.horizon_min), 'HH:mm')}
+                  y={f.predicted_mg_dl}
+                  r={0}
+                  label={{
+                    value: `${f.horizon_min}m`,
+                    position: 'top',
+                    fontSize: 9,
+                    fill: '#3b82f6',
+                  }}
+                />
+              ))}
 
             {/* Event markers */}
             {hasMarkers &&

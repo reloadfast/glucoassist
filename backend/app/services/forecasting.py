@@ -1,7 +1,7 @@
 """
 Glucose forecasting service.
 
-Model: Ridge regression (scikit-learn) per horizon (30, 60, 120 min).
+Model: Ridge regression (scikit-learn) per horizon (30, 60, 90, 120 min).
 Features (15): last 6 glucose values (current reading at w[5]) + 5-min delta
                + 10-min delta + avg rate + hour_sin/cos + weekday_sin/cos
                + IOB (insulin on board) + COB (carbs on board).
@@ -35,7 +35,7 @@ from app.services.iob import COB_DIA_MIN, RAPID_DIA_MIN, cob_fraction, iob_fract
 logger = logging.getLogger(__name__)
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-HORIZONS: dict[int, int] = {30: 6, 60: 12, 120: 24}  # horizon_min → n_steps
+HORIZONS: dict[int, int] = {30: 6, 60: 12, 90: 18, 120: 24}  # horizon_min → n_steps
 MIN_TRAIN_SAMPLES = 288  # 1 full day at 5-min intervals
 CI_Z = 1.28  # 80% confidence interval (±1.28σ)
 HYPO_THRESHOLD = 70.0

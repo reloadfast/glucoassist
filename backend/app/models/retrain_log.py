@@ -16,6 +16,7 @@ class RetrainLog(Base):
     training_samples: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mae_h30: Mapped[float | None] = mapped_column(Float, nullable=True)
     mae_h60: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mae_h90: Mapped[float | None] = mapped_column(Float, nullable=True)
     mae_h120: Mapped[float | None] = mapped_column(Float, nullable=True)
     promoted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)

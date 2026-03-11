@@ -150,6 +150,14 @@ export interface HorizonForecast {
   risk_level: 'low' | 'moderate' | 'high' | 'critical'
 }
 
+export interface ActionSuggestion {
+  type: 'ok' | 'hypo_treat' | 'hypo_warn' | 'hyper_correct' | 'hyper_warn'
+  urgency: 'low' | 'moderate' | 'high' | 'critical'
+  message: string
+  detail: string | null
+  disclaimer: string
+}
+
 export interface ModelMeta {
   last_trained: string | null
   training_samples: number | null
@@ -161,6 +169,7 @@ export interface ForecastResponse {
   forecasts: HorizonForecast[]
   overall_risk: 'low' | 'moderate' | 'high' | 'critical' | 'unknown'
   meta: ModelMeta
+  suggestions: ActionSuggestion[]
 }
 
 export function getForecast(): Promise<ForecastResponse> {

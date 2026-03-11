@@ -19,7 +19,47 @@ _retrain_running = False
 
 @router.get("", response_model=ForecastResponse)
 def get_forecast_endpoint(db: Session = Depends(get_db)) -> ForecastResponse:  # noqa: B008
-    return get_forecast(db)
+    result = get_forecast(db)
+
+    # Enrich with action suggestions (best-effort — never blocks the response)
+    try:
+        from app.models.glucose import GlucoseReading as _GlucoseReading
+        from app.services.iob import compute_cob, compute_iob
+        from app.services.ratios import _block_for_hour, get_ratios
+        from app.services.suggestions import compute_suggestions
+
+        iob = compute_iob(db)
+        cob = compute_cob(db)
+
+        latest = (
+            db.query(_GlucoseReading)
+            .order_by(_GlucoseReading.timestamp.desc())
+            .first()
+        )
+        current_glucose = float(latest.glucose_mg_dl) if latest else None
+        trend_arrow = latest.trend_arrow if latest else None
+
+        hour = datetime.now(UTC).hour
+        block = _block_for_hour(hour)
+        ratios = get_ratios(db)
+        block_data = next((b for b in ratios["blocks"] if b["block"] == block), None)
+        block_icr = block_data["icr"].mean if block_data and block_data["icr"] else None
+        block_cf = block_data["cf"].mean if block_data and block_data["cf"] else None
+
+        suggestions = compute_suggestions(
+            forecasts=result.forecasts,
+            iob=iob,
+            cob=cob,
+            current_glucose=current_glucose,
+            trend_arrow=trend_arrow,
+            block_icr=block_icr,
+            block_cf=block_cf,
+        )
+        result = result.model_copy(update={"suggestions": suggestions})
+    except Exception:
+        logger.exception("Suggestions computation failed — returning empty list")
+
+    return result
 
 
 @router.post("/retrain")
@@ -50,6 +90,7 @@ def trigger_retrain(
                 training_samples=result.training_samples if result.success else None,
                 mae_h30=result.maes.get("h30") if result.success else None,
                 mae_h60=result.maes.get("h60") if result.success else None,
+                mae_h90=result.maes.get("h90") if result.success else None,
                 mae_h120=result.maes.get("h120") if result.success else None,
                 promoted=result.promoted,
                 notes=result.notes,
@@ -86,6 +127,7 @@ def get_retrain_log(
                 "training_samples": r.training_samples,
                 "mae_h30": r.mae_h30,
                 "mae_h60": r.mae_h60,
+                "mae_h90": r.mae_h90,
                 "mae_h120": r.mae_h120,
                 "promoted": r.promoted,
                 "notes": r.notes,

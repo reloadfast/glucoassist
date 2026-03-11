@@ -7,7 +7,7 @@ import { HelpPopover } from '@/components/HelpPopover'
 import InsightsCard from '@/components/InsightsCard'
 import LogButtons from '@/components/LogButtons'
 import ReadingsTable from '@/components/ReadingsTable'
-import RiskAlertCard from '@/components/RiskAlertCard'
+import ForecastActionPanel from '@/components/ForecastActionPanel'
 import { useForecast } from '@/hooks/useForecast'
 import { useGlucoseData } from '@/hooks/useGlucoseData'
 import { getInsulinLog, getMealLog, postBackfill } from '@/lib/api'
@@ -17,7 +17,7 @@ const BACKFILL_OPTIONS = [30, 60, 90] as const
 
 export default function Dashboard() {
   const { summary, readings, loading, error, refresh } = useGlucoseData()
-  const { forecast } = useForecast()
+  const { forecast, loading: forecastLoading } = useForecast()
   const [backfilling, setBackfilling] = useState(false)
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
   const [eventMarkers, setEventMarkers] = useState<EventMarker[]>([])
@@ -278,7 +278,7 @@ export default function Dashboard() {
 
       <InsightsCard />
 
-      {forecast && <RiskAlertCard forecast={forecast} />}
+      <ForecastActionPanel forecast={forecast} loading={forecastLoading} />
 
       <Card>
         <CardHeader>

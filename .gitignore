@@ -83,3 +83,4 @@ logs/
 # === TRP ===
 trp/
 trp_logs/
+frontend/coverage/

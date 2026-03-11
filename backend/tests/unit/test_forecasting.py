@@ -184,7 +184,7 @@ def test_n_features_is_15():
 
 @pytest.mark.unit
 def test_horizons_values():
-    assert HORIZONS == {30: 6, 60: 12, 120: 24}
+    assert HORIZONS == {30: 6, 60: 12, 90: 18, 120: 24}
 
 
 @pytest.mark.unit
