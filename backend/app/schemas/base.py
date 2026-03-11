@@ -8,7 +8,7 @@ DateTime(timezone=True); this serialiser treats any naive value as UTC so
 that the frontend can parse it unambiguously as a UTC instant.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from pydantic import PlainSerializer
@@ -16,7 +16,7 @@ from pydantic import PlainSerializer
 
 def _dt_utc_z(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.isoformat().replace("+00:00", "Z")
 
 

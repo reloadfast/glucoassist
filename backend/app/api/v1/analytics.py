@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import numpy as np
@@ -71,8 +71,16 @@ def get_pattern_history(db: Session = Depends(get_db)) -> dict:  # noqa: B008
         "history": [
             {
                 "pattern_name": r.pattern_name,
-                "first_detected_at": (r.first_detected_at if r.first_detected_at.tzinfo else r.first_detected_at.replace(tzinfo=timezone.utc)).isoformat().replace("+00:00", "Z"),
-                "last_detected_at": (r.last_detected_at if r.last_detected_at.tzinfo else r.last_detected_at.replace(tzinfo=timezone.utc)).isoformat().replace("+00:00", "Z"),
+                "first_detected_at": (
+                    r.first_detected_at
+                    if r.first_detected_at.tzinfo
+                    else r.first_detected_at.replace(tzinfo=UTC)
+                ).isoformat().replace("+00:00", "Z"),
+                "last_detected_at": (
+                    r.last_detected_at
+                    if r.last_detected_at.tzinfo
+                    else r.last_detected_at.replace(tzinfo=UTC)
+                ).isoformat().replace("+00:00", "Z"),
                 "detection_count": r.detection_count,
                 "last_confidence": r.last_confidence,
             }

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel

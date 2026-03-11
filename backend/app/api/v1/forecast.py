@@ -1,6 +1,6 @@
 import logging
 import threading
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
@@ -121,7 +121,11 @@ def get_retrain_log(
         "entries": [
             {
                 "id": r.id,
-                "triggered_at": (r.triggered_at if r.triggered_at.tzinfo else r.triggered_at.replace(tzinfo=timezone.utc)).isoformat().replace("+00:00", "Z"),
+                "triggered_at": (
+                    r.triggered_at
+                    if r.triggered_at.tzinfo
+                    else r.triggered_at.replace(tzinfo=UTC)
+                ).isoformat().replace("+00:00", "Z"),
                 "trigger_source": r.trigger_source,
                 "success": r.success,
                 "training_samples": r.training_samples,
